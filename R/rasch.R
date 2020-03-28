@@ -1,4 +1,4 @@
-rasch <- function(x, method="VB", Iters=500, Smpl=500, Thin=1, Ad=500, seed=666){
+rasch <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
 
   ### Start====
   require(LaplacesDemon)
@@ -79,8 +79,8 @@ rasch <- function(x, method="VB", Iters=500, Smpl=500, Thin=1, Ad=500, seed=666)
                                 CPUs=CPUs, Type="PSOCK")
   } else if (method=="MCMC") {
     ## No-U-Turn Sampler====
-    #Iters=10000; Status=100; Thin=10; Ad=500; delta=.6
-    Iters=Iters; Status=Iters/10; Thin=Thin; Ad=Ad
+    #Iters=20000; Status=100; Thin=10; Ad=500; delta=.6
+    Iters=Iters; Status=Iters/10; Thin=Thin; Ad=A
     Fit <- LaplacesDemon(Model=Model, Data=MyData,
                          Initial.Values=Initial.Values,
                          Covar=NULL, Iterations=Iters,Status=Status,
@@ -88,7 +88,7 @@ rasch <- function(x, method="VB", Iters=500, Smpl=500, Thin=1, Ad=500, seed=666)
                          Specs=list(A=Ad,delta=0.6,epsilon=NULL,Lmax=Inf))
   } else if (method=="PMC") {
     ## Population Monte Carlo====
-    #Iters=10; Thin=11; Smpl=1000
+    #Iters=10; Thin=1; Smpl=1000
     Iters=Iters; Smpl=Smpl; Thin=Thin
     Fit <- PMC(Model=Model, Data=MyData, Initial.Values=Initial.Values,
                Covar=NULL, Iterations=Iters, Thinning=Thin, alpha=NULL,

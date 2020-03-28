@@ -1,4 +1,4 @@
-sirm <- function(x, method="VB", Iters=500, Smpl=500, Thin=1, Ad=500, seed=666){
+sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
 
   ### Start====
   require(LaplacesDemon)
@@ -74,7 +74,7 @@ sirm <- function(x, method="VB", Iters=500, Smpl=500, Thin=1, Ad=500, seed=666){
                                 CovEst="Identity", Stop.Tolerance=1e-5,
                                 CPUs=CPUs, Type="PSOCK")
   } else if (method=="MCMC") {
-    Iters=Iters; Status=Iters/10; Thin=Thin; Ad=Ad
+    Iters=Iters; Status=Iters/10; Thin=Thin; Ad=A
     Fit <- LaplacesDemon(Model=Model, Data=MyData,
                          Initial.Values=Initial.Values,
                          Covar=NULL, Iterations=Iters,Status=Status,

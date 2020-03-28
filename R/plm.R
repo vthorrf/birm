@@ -1,5 +1,5 @@
-plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=500,
-                Status=100, Thin=1, Ad=500, delta=.6, seed=666){
+plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
+                Status=100, Thin=1, A=500, delta=.6, seed=666){
 
   ### Start====
   require(LaplacesDemon)
@@ -274,7 +274,7 @@ plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=500,
   } else if (method=="MCMC") {
     ## No-U-Turn Sampler====
     #Iters=10000; Status=100; Thin=10; Ad=500; delta=.6
-    Iters=Iters; Status=Status; Thin=Thin; Ad=Ad; delta=delta
+    Iters=Iters; Status=Status; Thin=Thin; Ad=A; delta=delta
     Fit <- LaplacesDemon(Model=Model, Data=MyData,
                          Initial.Values=Initial.Values,
                          Covar=NULL, Iterations=Iters,Status=Status,

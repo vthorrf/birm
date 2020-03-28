@@ -1,81 +1,45 @@
-\name{scoring}
-\alias{scoring}
-\title{Scoring Methods to Change Observed Scores}
+\name{plm}
+\alias{plm}
+\title{Bayesian of the N-Parameter Logistic Models}
 \description{
-Creates a ordered matrix to be evaluated using Additive Conjoint Measurement Theory.
+An Bayesian implementation of the N-Parameter Logistic Models, with N from 1 to 4.
 }
 \usage{
-scoring(rabil,rdiff,n,v,x,l,p=.5,type="rank")
+plm(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666)
 }
 \arguments{
-   \item{rabil}{A vector of estimates of person abilities.}
-   \item{rdiff}{A vector of estimates of item difficulty.}
-   \item{n}{The number of individuals in the sample.}
-   \item{v}{The number of items in the test.}
-   \item{x}{A long format dataset. Only used for type "bayes".}
-   \item{l}{The number of levels on the scale. Only used for type "bayes".}
-   \item{p}{The probability of answering right when ability and difficulty match. Used for types "cond" and "condb".}
-   \item{type}{The method of scoring. "rank" if the ranking method is prefered. "cond" if conditional probability method is prefered. "bayes" if Bayesian Rasch method is prefered. "condb" if Bayesian Conditional is prefered. "2PL" if Two-parameter logistic is prefered.}
+   \item{x}{A matrix in the wide format. You should certify that: the score are binary and the minimum possible score is 0; all variables are named; and that are only variables to be modeled.}
+   \item{p}{Indicates which model will be fitted. When p = 1, the function returns the One-Parameter Logistic Model (1PLM). When p = 2, the function returns the 2PLM. p = 3 returns the 3PLM and p = 4 returns the 4PLM.}
+   \item{scaling}{The scaling parameter for when fitting the one-parameter logistic model (p = 1).}
+   \item{method}{The Bayesian estimation method to be used. Defaults to "VB" Variational Bayes. It can also be Laplace Approximation ("LA"), MCMC No-U-Turn Sampler ("MCMC"), Population Monte Carlo ("PMC"), or Iterative Quadrature ("IQ").}
+   \item{Iters}{The maximum number of iterations. The default value, 500, is proposed for the default estimation method, "VB". For method "LA", we suggest 100 as the default. For method "MCMC", 20000. For method "PMC", 10. Finally, for method "IQ", 100.}
+   \item{Smpl}{This argument indicates the number of posterior samples to be taken with sampling importance resampling for the estimation methods "IQ","LA", and "VB". For the "PMC" method, this is the number of samples per mixture component. This argument is not used by the "MCMC" method. The default value, 1000, is already fit for all the estimation methods that use this argument.}
+   \item{Thin}{This is the number by which the posterior is thinned. Only "MCMC" and "PMC" estimation methods use this argument.}
+   \item{A}{A is used only by the "MCMC" method. It is the number of initial, adaptive iterations to be discarded as burn-in. The value defaults to 500.}
+   \item{seed}{The random seed for guaranteeing replicable results. As most examples in LaplacesDemon, it defaults to 666.}
 }
 \value{
-A list containing the following component (for "rank" and "cond" methods):
-  \item{scores}{A rescored data set.}
-For "bayes", "condb" and "2PL" methods:
-  \item{matrix}{A rescored data set.}
-  \item{abil}{Aptitude estimates.}
-  \item{easi}{Easiness estimates.}
-  \item{dic}{DIC fit.}
-  \item{full}{The full Bayesian run.}
-For "2PL" method:
-  \item{matrix}{A rescored data set.}
-  \item{abil}{Aptitude estimates.}
-  \item{easi}{Easiness estimates.}
-  \item{disc}{Discrimination estimates.}
-  \item{dic}{DIC fit.}
-  \item{full}{The full Bayesian run.}
+A list containing the following components:
+  \item{Data}{The information used for running the model.}
+  \item{Model}{The LaplacesDemon model used.}
+  \item{Fit}{All the information returned by LaplacesDemon estimation method regarding the fit of the model.}
+  \item{abil}{The MAP estimates of the theta parameter.}
+  \item{diff}{The MAP estimates of the difficulty parameter.}
+  \item{disc}{The MAP estimates of the discrimination parameter. Not returned when p = 1.}
+  \item{gues}{The MAP estimates of the guessing parameter. Not returned when p < 3.}
+  \item{UpAs}{The MAP estimates of the upper asymptote parameter. Not returned when p != 4.}
+  \item{DIC}{A list with the values of DIC, Dbar, and pV.}
 }
 \examples{
 ### Random Data with 100 observations and 10 variables with 5 levels of response
-n = 100; v = 10; l = 5
-Data <- matrix(NA,nrow=n,ncol=v)
-psi <- seq(length=n,-3,3); theta <- seq(length=v,-3,3); eta <- matrix(NA,ncol=v,nrow=n)
-seed <- matrix(c(1:(n*v)),nrow=n,ncol=v)
-for(i in 1:n)
-{
-  for(j in 1:v)
-  {
-    set.seed(seed[i,j])
-    eta[i,j] <- exp(psi[i]-theta[j])/(1+exp(psi[i]-theta[j]))
-    Data[i,j] <- rbinom(1,l-1,eta[i,j])
-  }
-}
-rm(eta,seed,i,j)
-Subj1 <- vector(mode="character",length=9); Subj2 <- vector(mode="character",length=n)
-Item <- vector(mode="character",length=v)
-for (i in 1:9) {Subj1[i] <- paste("S",0,i,sep="")}
-for (i in 1:n) {Subj2[i] <- paste("S",i,sep="")}; Subj2 <- Subj2[10:n]
-Subj <- c(Subj1,Subj2); rm(Subj1,Subj2)
-for (i in 1:v) {Item[i] <- paste("I",i,sep="")}
-DF <- data.frame(Subj,Data); colnames(DF) <- c("Subj",Item[1:v])
-require(tidyr)
-theData <- gather(DF, Subj, Correct, I1:I10, factor_key=TRUE)
-colnames(theData) <- c("Subj","Item","Correct")
-theData <- theData[with(theData, order(Subj)), ]
-rownames(theData) <- c(1:(n*v)); head(theData)
-theData$Subj = factor( theData$Subj )
-theData$Item = factor( theData$Item )
-theData$Correct = as.integer( theData$Correct )
-
-### Create Scores
-AbilF <- latent.vs(Data,l,what="person",method="freq")
-Af <- AbilF$abil
-EasiF <- latent.vs(Data,l,what="item",method="freq")
-Ef <- EasiF$easi
-
-### Rescore
-scoring(n=n,v=v,type="rank")
-scoring(rabil=Af,rdiff=1-Ef,type="cond")
-scoring(n=n,v=v,x=theData,l=l,type="bayes")
-scoring(n=n,v=v,x=theData,l=l,type="condb")
-scoring(n=n,v=v,x=theData,l=l,type="2PL")
+n = 100; v = 10; l = 2
+Data <- simRasch(n, v, 2)
+# 1PLM
+fit1  <- plm(Data, p=1, scaling=1.7, method="LA", Iters=100, Smpl=1000)
+# 2PLM
+fit2  <- plm(Data, p=2, method="LA", Iters=100, Smpl=1000)
+# 3PLM
+fit3  <- plm(Data, p=3, method="LA", Iters=100, Smpl=1000)
+# 4PLM
+fit4  <- plm(Data, p=4, method="LA", Iters=100, Smpl=1000)
 }
