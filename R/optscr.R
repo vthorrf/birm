@@ -1,4 +1,4 @@
-optscr <- function(x, levels, knot, method="VB",
+optscr <- function(x, levels=NULL, knot=NULL, method="VB",
                    Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
 
   ### Start====

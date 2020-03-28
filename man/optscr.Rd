@@ -30,6 +30,6 @@ A list containing the following components:
 \examples{
 ### Random Data with 100 observations and 10 variables with 5 levels of response
 n = 100; v = 10; l = 5
-Data <- simRasch(n, v, 5)
+Data <- simRasch(n, v, l)$data
 fit  <- optscr(Data, levels=l, method="LA", Iters=100, Smpl=1000)
 }

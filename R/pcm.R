@@ -1,4 +1,4 @@
-pcm <- function(x, levels, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
+pcm <- function(x, levels=NULL, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
 
   ### Start====
   require(LaplacesDemon)
@@ -10,6 +10,7 @@ pcm <- function(x, levels, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, A=500
   if(CPUs == 0) CPUs = 1
 
   ### Convert data to long format====
+  if (is.null(levels)) levels <- max(x)
   lonlong <- gather(data.frame(x), item, resp, colnames(x), factor_key=TRUE)
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
 

@@ -1,5 +1,5 @@
 plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
-                Status=100, Thin=1, A=500, delta=.6, seed=666){
+                Status=100, Thin=1, A=500, seed=666){
 
   ### Start====
   require(LaplacesDemon)
