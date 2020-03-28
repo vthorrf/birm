@@ -1,0 +1,21 @@
+Package: birm
+Type: Package
+Title: Fitting unidimensional Item Response Model
+Version: 0.1.0
+Year: 2020, March
+Author: Vithor Rosa Franco <vithorfranco@gmail.com>
+Maintainer: Vithor Rosa Franco <vithorfranco@gmail.com>
+Description: This package have functions for fitting some traditional Item Response Models. 
+             It was based on the edstan package. But instead of using Stan, it uses LaplacesDemon. 
+             Stan uses the NUTS MCMC algorithm for fitting the data. In our package, the user can
+             choose from the five estimation methods implemented on LaplacesDemon: Variational Bayes;
+             Laplace Approximation; NUTS; PMC; and Iterative Quadrature.
+Depends: LaplacesDemon,
+         compiler,
+         parallel,
+         tidyr, 
+         matrixStats
+License: GPL-2
+Encoding: UTF-8
+LazyData: true
+URL: http://influencia.unb.br/
