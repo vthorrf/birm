@@ -12,6 +12,5 @@ This package should be considered experimental.
 
 Using the 'devtools' package:
 
-    install.packages("devtools")
-    library(devtools)
-    install_github("vthorrf/birm")
+    install.packages("remotes")
+    remotes::install_github("vthorrf/birm")
