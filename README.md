@@ -10,7 +10,7 @@ This package should be considered experimental.
 # Installation #
 ---
 
-Using the 'devtools' package:
+Using the 'remotes' package:
 
     install.packages("remotes")
     remotes::install_github("vthorrf/birm")
