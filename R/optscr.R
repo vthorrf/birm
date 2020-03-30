@@ -12,6 +12,8 @@ optscr <- function(x, levels=NULL, knot=NULL, method="VB",
   ### Convert data to long format====
   if (is.null(levels)) levels <- max(x) + 1
   if (is.null(knot)) knot <- seq(0,1, len=if(ncol(x) > 10) 10 else ncol(x))
+  base_score <- as.vector(scale(rowMeans(x), center=(levels - 1) * .5))
+  var_bscore <- (pnorm(base_score) * (1 - pnorm(base_score)) ) * (levels - 1)
   basis <- length(knot)
   lonlong <- gather(data.frame(x), item, resp, colnames(x), factor_key=TRUE)
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
@@ -22,12 +24,13 @@ optscr <- function(x, levels=NULL, knot=NULL, method="VB",
   pos.theta  <- grep("theta", parm.names)
   pos.b      <- grep("b", parm.names)
   PGF <- function(Data) {
-    theta <- rnorm(Data$n)
+    theta <- rnorm(Data$n, Data$base_score, sqrt(Data$var_bscore))
     b     <- rlaplace(Data$basis * Data$v)
     return(c(theta, b))
   }
   MyData <- list(parm.names=parm.names, mon.names=mon.names, levels=levels,
                  PGF=PGF, X=data_long, n=nrow(x), v=ncol(x), basis=basis,
+                 base_score=base_score, var_bscore=var_bscore,
                  pos.theta=pos.theta, pos.b=pos.b, knot=knot)
   is.data(MyData)
 
@@ -39,7 +42,7 @@ optscr <- function(x, levels=NULL, knot=NULL, method="VB",
     b     <- parm[Data$pos.b]
 
     ### Log-Priors
-    theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
+    theta.prior <- sum(dnorm(theta, mean=Data$base_score, sd=sqrt(Data$var_bscore), log=TRUE))
     b.prior     <- sum(dlaplace(b, location=0, scale=1, log=T))
     Lpp <- theta.prior + b.prior
 
