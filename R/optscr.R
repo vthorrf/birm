@@ -24,7 +24,7 @@ optscr <- function(x, levels=NULL, knot=NULL, method="VB",
   pos.theta  <- grep("theta", parm.names)
   pos.b      <- grep("b", parm.names)
   PGF <- function(Data) {
-    theta <- rnorm(Data$n, Data$base_score, sqrt(Data$var_bscore))
+    theta <- rnorm(Data$n)
     b     <- rlaplace(Data$basis * Data$v)
     return(c(theta, b))
   }
@@ -42,12 +42,12 @@ optscr <- function(x, levels=NULL, knot=NULL, method="VB",
     b     <- parm[Data$pos.b]
 
     ### Log-Priors
-    theta.prior <- sum(dnorm(theta, mean=Data$base_score, sd=sqrt(Data$var_bscore), log=TRUE))
+    theta.prior <- sum(dnorm(theta, mean=Data$base_score, sd=sqrt(Data$var_bscore), log=T))
     b.prior     <- sum(dlaplace(b, location=0, scale=1, log=T))
     Lpp <- theta.prior + b.prior
 
     ### Log-Likelihood
-    thetaLL <- plogis( rep(theta, times=Data$v) )
+    thetaLL <- pnorm( rep(theta, times=Data$v) )
     BsL     <- rep(b    , each=Data$n)
     bLL     <- matrix(BsL , nrow=nrow(Data$X), ncol=Data$basis)
     kLL     <- t(matrix(knot, nrow=Data$basis, ncol=nrow(Data$X)))
