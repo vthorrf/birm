@@ -22,7 +22,6 @@ All of the following estimation methods implemented in LaplacesDemon are availab
 * Iterative Quadrature (`method = "IQ"` argument)
 
 # Installation #
----
 
 Using the 'remotes' package:
 
