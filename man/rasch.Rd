@@ -5,7 +5,7 @@
 An Bayesian implementation of the Rasch model.
 }
 \usage{
-rasch(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666)
+rasch(x, interaction=F, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666)
 }
 \arguments{
    \item{x}{A matrix in the wide format. You should certify that: the scores are binary, coded 0 and 1; all variables are named; and that are only variables to be modeled.}
@@ -28,6 +28,6 @@ A list containing the following components:
 \examples{
 ### Random Data with 100 observations and 10 variables with 2 levels of response
 n = 100; v = 10; l = 2
-Data <- simRasch(n, v, l)$data
+Data <- simData(n, v, l)$data
 fit  <- rasch(Data, method="LA", Iters=100, Smpl=1000)
 }

@@ -28,6 +28,6 @@ A list containing the following components:
 \examples{
 ### Random Data with 100 observations and 10 variables with 2 levels of response
 n = 100; v = 10; l = 2
-Data <- simRasch(n, v, l)$data
+Data <- simData(n, v, l)$data
 fit  <- sirm(Data, method="LA", Iters=100, Smpl=1000)
 }

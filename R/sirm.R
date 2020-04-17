@@ -18,8 +18,8 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
   pos.theta  <- grep("theta", parm.names)
   pos.b      <- grep("b", parm.names)
   PGF <- function(Data) {
-    theta <- rnorm(Data$n)
-    b     <- rnorm(Data$v)
+    theta <- rnorm(Data$n, mean=0, sd=10)
+    b     <- rnorm(Data$v, mean=0, sd=10)
     return(c(theta, b))
   }
   MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -35,8 +35,8 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
     b     <- parm[Data$pos.b]
 
     ### Log-Priors
-    theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
-    b.prior     <- sum(dnorm(b, mean=0, sd=1, log=T))
+    theta.prior <- sum(dnorm(theta, mean=0, sd=10, log=TRUE))
+    b.prior     <- sum(dnorm(b, mean=0, sd=10, log=T))
     Lpp <- theta.prior + b.prior
 
     ### Log-Likelihood
@@ -98,8 +98,8 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
   } else {stop('Unknown optimization method.')}
 
   ### Results====
-  abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-  diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
+  abil = exp(Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1])
+  diff = exp(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1])
   Dev  = Fit$Deviance
   DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 

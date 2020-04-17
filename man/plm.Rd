@@ -33,7 +33,7 @@ A list containing the following components:
 \examples{
 ### Random Data with 100 observations and 10 variables with 2 levels of response
 n = 100; v = 10; l = 2
-Data <- simRasch(n, v, l)$data
+Data <- simData(n, v, l)$data
 # 1PLM
 fit1  <- plm(Data, p=1, scaling=1.7, method="LA", Iters=100, Smpl=1000)
 # 2PLM

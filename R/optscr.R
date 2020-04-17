@@ -1,5 +1,6 @@
-optscr <- function(x, levels=NULL, knot=NULL, method="VB",
-                   Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
+optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
+                   method="VB", Iters=500, Smpl=1000, Thin=1,
+                   A=500, seed=666) {
 
   ### Start====
   require(LaplacesDemon)
@@ -11,27 +12,29 @@ optscr <- function(x, levels=NULL, knot=NULL, method="VB",
 
   ### Convert data to long format====
   if (is.null(levels)) levels <- max(x) + 1
-  if (is.null(knot)) knot <- seq(0,1, len=if(ncol(x) > 10) 10 else ncol(x))
+  knots <- seq(0, 1, len=knot)
+  knots <- knots[-c(1,knot)]
   base_score <- as.vector(scale(rowMeans(x), center=(levels - 1) * .5))
   var_bscore <- (pnorm(base_score) * (1 - pnorm(base_score)) ) * (levels - 1)
-  basis <- length(knot)
+  len_basis <- knot + 1
   lonlong <- gather(data.frame(x), item, resp, colnames(x), factor_key=TRUE)
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
 
   ### Assemble data list====
   mon.names  <- "LP"
-  parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x) * basis) ))
+  parm.names <- as.parm.names(list( theta=rep(0,nrow(x)),
+                                    b=rep(0,ncol(x) * len_basis) ))
   pos.theta  <- grep("theta", parm.names)
   pos.b      <- grep("b", parm.names)
   PGF <- function(Data) {
     theta <- rnorm(Data$n)
-    b     <- rlaplace(Data$basis * Data$v)
+    b     <- rlaplace(Data$len_basis * Data$v)
     return(c(theta, b))
   }
   MyData <- list(parm.names=parm.names, mon.names=mon.names, levels=levels,
-                 PGF=PGF, X=data_long, n=nrow(x), v=ncol(x), basis=basis,
+                 PGF=PGF, X=data_long, n=nrow(x), v=ncol(x), len_basis=len_basis,
                  base_score=base_score, var_bscore=var_bscore,
-                 pos.theta=pos.theta, pos.b=pos.b, knot=knot)
+                 pos.theta=pos.theta, pos.b=pos.b, knots=knots)
   is.data(MyData)
 
   ### Model====
@@ -43,15 +46,47 @@ optscr <- function(x, levels=NULL, knot=NULL, method="VB",
 
     ### Log-Priors
     theta.prior <- sum(dnorm(theta, mean=Data$base_score, sd=sqrt(Data$var_bscore), log=T))
-    b.prior     <- sum(dlaplace(b, location=0, scale=1, log=T))
+    b.prior     <- sum(dlaplace(b, location=0, scale=10, log=T))
     Lpp <- theta.prior + b.prior
 
     ### Log-Likelihood
     thetaLL <- pnorm( rep(theta, times=Data$v) )
     BsL     <- rep(b    , each=Data$n)
-    bLL     <- matrix(BsL , nrow=nrow(Data$X), ncol=Data$basis)
-    kLL     <- t(matrix(knot, nrow=Data$basis, ncol=nrow(Data$X)))
-    IRF     <- plogis( rowSums((((thetaLL < kLL) * -2) + 1) * bLL) )
+    bLL     <- matrix(BsL , nrow=nrow(Data$X), ncol=Data$len_basis)
+    #kLL     <- t(matrix(knots, nrow=Data$len_basis, ncol=nrow(Data$X)))
+    if (is.null(basis)) {
+      kLL <- as.matrix(splines::bs(thetaLL, knots=Data$knots))
+      if (is.null(irf)) {
+        IRF     <- plogis( rowSums( kLL * bLL ) )
+      } else if (irf == "logit") {
+        IRF     <- plogis( rowSums( kLL * bLL ) )
+      } else if (irf == "sirm") {
+        IRF     <- 1 / (1 + exp(rowSums( kLL * bLL )))
+      } else { stop("Unkown IRF :(") }
+
+    } else if (basis == "b-spline") {
+      kLL <- as.matrix(splines::bs(thetaLL, knots=Data$knots))
+      if (is.null(irf)) {
+        IRF     <- plogis( rowSums( kLL * bLL ) )
+      } else if (irf == "logit") {
+        IRF     <- plogis( rowSums( kLL * bLL ) )
+      } else if (irf == "sirm") {
+        IRF     <- 1 / (1 + exp(rowSums( kLL * bLL )))
+      } else { stop("Unkown IRF :(") }
+
+    } else if (basis == "rademacher") {
+      nKK <- seq(0, 1, len=Data$len_basis)
+      KK  <- t(matrix(nKK, nrow=length(nKK), ncol=length(thetaLL)))
+      W   <- rowSums((((thetaLL < KK) * -2) + 1) * bLL)
+      if (is.null(irf)) {
+        IRF     <- plogis( W )
+      } else if (irf == "logit") {
+        IRF     <- plogis( W )
+      } else if (irf == "sirm") {
+        IRF     <- 1 / (1 + exp(W))
+      } else { stop("Unkown IRF :(") }
+
+    } else { stop("Unkown basis :(") }
     LL      <- sum( dbinom(Data$X[,3], size=(Data$levels - 1), prob=IRF, log=T) )
 
     ### Log-Posterior
@@ -114,21 +149,51 @@ optscr <- function(x, levels=NULL, knot=NULL, method="VB",
                                Samples=Smpl, sir=T,
                                Stop.Tolerance=c(1e-5,1e-15),
                                Type="PSOCK", CPUs=CPUs)
-  } else {stop('Unknown optimization method.')}
+  } else { stop('Unknown optimization method.') }
 
   ### Results====
-  abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-  Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
-  rownames(Base) = colnames(x)
-  colnames(Base) = paste("Beta",1:basis,sep="_")
-  ICC <- lapply(1:nrow(Base), function(g) {
-    Pr <- plogis(
-      as.vector(crossprod(Base[g,],
-                          t((((plogis(seq(-3,3,len=100)) <
-                                 t(matrix(knot, nrow=basis, ncol=100))) * -2) +1)) )))
-    theta <- seq(-3,3,len=100)
-    return(data.frame(theta, Pr))
-  })
+  if (is.null(irf)) {
+    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+    Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
+    rownames(Base) = colnames(x)
+    colnames(Base) = paste("Beta",1:len_basis,sep="_")
+    ICC <- lapply(1:nrow(Base), function(g) {
+      Pr <- plogis(
+        as.vector(crossprod(Base[g,],
+                            t((((plogis(seq(-3,3,len=100)) <
+                                   t(matrix(knots, nrow=len_basis, ncol=100))) * -2) +1)) )))
+      theta <- seq(-3,3,len=100)
+      return(data.frame(theta, Pr))
+    })
+  } else if (irf == "logit") {
+    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+    Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
+    rownames(Base) = colnames(x)
+    colnames(Base) = paste("Beta",1:len_basis,sep="_")
+    ICC <- lapply(1:nrow(Base), function(g) {
+      Pr <- plogis(
+        as.vector(crossprod(Base[g,],
+                            t((((plogis(seq(-3,3,len=100)) <
+                                   t(matrix(knots, nrow=len_basis, ncol=100))) * -2) +1)) )))
+      theta <- seq(-3,3,len=100)
+      return(data.frame(theta, Pr))
+    })
+  } else if (irf == "sirm") {
+    abil = exp(Fit$Summary1[grep("theta", rownames(Fit$Summary1),
+                                 fixed=TRUE),1])
+    Base = exp(matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1),
+                                        fixed=TRUE),1], nrow=ncol(x)))
+    rownames(Base) = colnames(x)
+    colnames(Base) = paste("Beta",1:len_basis,sep="_")
+    ICC <- lapply(1:nrow(Base), function(g) {
+      Pr <- plogis(
+        as.vector(crossprod(Base[g,],
+                            t((((plogis(seq(exp(-3),exp(3),len=100)) <
+                                   t(matrix(knots, nrow=len_basis, ncol=100))) * -2) +1)) )))
+      theta <- seq(exp(-3),exp(3),len=100)
+      return(data.frame(theta, Pr))
+    })
+  } else { stop("Unkown IRF :(") }
   Dev  = Fit$Deviance
   DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 

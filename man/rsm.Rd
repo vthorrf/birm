@@ -32,7 +32,7 @@ A list containing the following components:
 \examples{
 ### Random Data with 100 observations and 10 variables with 5 levels of response
 n = 100; v = 10; l = 5
-Data <- simRasch(n, v, l)$data + 1
+Data <- simData(n, v, l)$data + 1
 # Partial Credits Model
 fit1  <- rsm(Data, levels=l, p=1, method="LA", Iters=100, Smpl=1000)
 # Generalized Partial Credits Model

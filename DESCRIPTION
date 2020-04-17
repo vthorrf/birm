@@ -1,8 +1,8 @@
 Package: birm
 Type: Package
 Title: Fitting unidimensional Item Response Model
-Version: 0.1.0
-Year: 2020, March
+Version: 0.1.2
+Year: 2020, April
 Author: Vithor Rosa Franco <vithorfranco@gmail.com>
 Maintainer: Vithor Rosa Franco <vithorfranco@gmail.com>
 Description: This package have functions for fitting some traditional Item Response Models. 
