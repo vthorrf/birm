@@ -1,4 +1,5 @@
-sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
+sirm <- function(x, method="VB", Iters=500, Smpl=1000,
+                 Thin=1, A=500, temp=1e-2, tmax=1, seed=666){
 
   ### Start====
   require(LaplacesDemon)
@@ -20,8 +21,8 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
   pos.theta  <- grep("theta", parm.names)
   pos.b      <- grep("b", parm.names)
   PGF <- function(Data) {
-    theta <- rnorm(Data$n, mean=0, sd=10)
-    b     <- rnorm(Data$v, mean=0, sd=10)
+    theta <- rnorm(Data$n, mean=0, sd=1)
+    b     <- rnorm(Data$v, mean=0, sd=1)
     return(c(theta, b))
   }
   MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -44,7 +45,8 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
     ### Log-Likelihood
     thetaLL <- exp(rep(theta, times=Data$v))
     bLL     <- exp(rep(b    , each=Data$n))
-    IRF     <- thetaLL / ( thetaLL + bLL )
+    #IRF     <- thetaLL / ( thetaLL + bLL )
+    IRF     <- 1 / ( 1 + (bLL / thetaLL) )
     LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
     ### Log-Posterior

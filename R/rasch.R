@@ -1,5 +1,5 @@
 rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
-                  Thin=1, A=500, seed=666){
+                  Thin=1, A=500, temp=1e-2, tmax=1, seed=666){
 
   ### Start====
   require(LaplacesDemon)
