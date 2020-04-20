@@ -17,7 +17,9 @@ rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
   if (interaction == F) {
     ### Rasch model
     # Assemble data list
-    mon.names  <- "LP"
+    if (method == "MAP") {
+      mon.names  <- "LL"
+    } else { mon.names  <- "LP" }
     parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x)) ))
     pos.theta  <- grep("theta", parm.names)
     pos.b      <- grep("b", parm.names)
@@ -166,21 +168,43 @@ rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
                                Samples=Smpl, sir=T,
                                Stop.Tolerance=c(1e-5,1e-15),
                                Type="PSOCK", CPUs=CPUs)
+  } else if (method=="MAP") {
+    ## Maximum a Posteriori====
+    #Iters=100; Smpl=1000
+    Iters=Iters; Status=Iters/10
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData,
+               maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
   } else {stop('Unknown optimization method.')}
 
   ### Results====
-  abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-  diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
-  Dev  = Fit$Deviance
-  DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+  if (method=="MAP") {
+    abil = Fit$parm[pos.theta]
+    diff = Fit$parm[pos.b]
+    BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
 
-  if (interaction == F) {
-    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                    'abil'=abil,'diff'=diff,'DIC'=DIC)
+    if (interaction == F) {
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,'BIC'=BIC)
+    } else {
+      weight = Fit$parm[pos.delta]
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,'weight'=weight,'BIC'=BIC)
+    }
   } else {
-    weight = Fit$Summary1[grep("delta", rownames(Fit$Summary1), fixed=TRUE),1]
-    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                    'abil'=abil,'diff'=diff,'weight'=weight,'DIC'=DIC)
+    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+    diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
+    Dev  = Fit$Deviance
+    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+
+    if (interaction == F) {
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,'DIC'=DIC)
+    } else {
+      weight = Fit$Summary1[grep("delta", rownames(Fit$Summary1), fixed=TRUE),1]
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,'weight'=weight,'DIC'=DIC)
+    }
   }
+
   return(Results)
 }

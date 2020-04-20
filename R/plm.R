@@ -17,7 +17,9 @@ plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
   if (p == 1) {
     ## One-parameter logistic====
     # Assemble data list
-    mon.names  <- "LP"
+    if (method == "MAP") {
+      mon.names  <- "LL"
+    } else { mon.names  <- "LP" }
     parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x)),
                                       Ds=rep(0,1) ))
     pos.theta  <- grep("theta", parm.names)
@@ -299,10 +301,25 @@ plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
                                Samples=Smpl, sir=T,
                                Stop.Tolerance=c(1e-5,1e-15),
                                Type="PSOCK", CPUs=CPUs)
+  } else if (method=="MAP") {
+    ## Maximum a Posteriori====
+    #Iters=100; Smpl=1000
+    Iters=Iters; Status=Iters/10
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData,
+               maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
   } else {stop('Unknown estimation method.')}
 
   ### Results====
   if (p == 1) {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = Fit$parm[pos.b]
+      disc = Fit$parm[pos.Ds]
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
+                      'abil'=abil,'diff'=diff,"disc"=disc,'BIC'=BIC)
+    } else {
     ## One-parameter logistic====
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -312,7 +329,17 @@ plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
 
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,'DIC'=DIC)
+    }
   } else if (p == 2) {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = Fit$parm[pos.b]
+      disc = Fit$parm[pos.Ds]
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
+                      'abil'=abil,'diff'=diff,"disc"=disc,'BIC'=BIC)
+    } else {
     ## Two-parameter logistic====
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -322,7 +349,18 @@ plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
 
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,'DIC'=DIC)
+    }
   } else if (p == 3) {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = Fit$parm[pos.b]
+      disc = Fit$parm[pos.Ds]
+      gues = Fit$parm[pos.c]
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
+                      'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,'BIC'=BIC)
+    } else {
     ## Three-parameter logistic====
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -333,7 +371,20 @@ plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
 
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,'DIC'=DIC)
+    }
   } else if (p == 4) {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = Fit$parm[pos.b]
+      disc = Fit$parm[pos.Ds]
+      gues = Fit$parm[pos.c]
+      UpAs = Fit$parm[pos.UA]
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
+                      'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,
+                      "UpAs"=UpAs,'BIC'=BIC)
+    } else {
     ## Four-parameter logistic====
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -346,7 +397,7 @@ plm <- function(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,
                     "UpAs"=UpAs,'DIC'=DIC)
-
+    }
   } else warning("Can't return any result :P")
 
   return(Results)

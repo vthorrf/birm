@@ -20,6 +20,7 @@ All of the following estimation methods implemented in LaplacesDemon are availab
 * No-U-Turn Sampler (`method = "MCMC"` argument)
 * Population Monte Carlo (`method = "PMC"` argument)
 * Iterative Quadrature (`method = "IQ"` argument)
+* Maximum a Posteriori with Simulated Annealing (`method = "MAP"` argument; not originally implemented in LaplacesDemon)
 
 # Installation #
 

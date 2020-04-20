@@ -1,6 +1,6 @@
 optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
                    method="VB", Iters=500, Smpl=1000, Thin=1,
-                   A=500, seed=666) {
+                   A=500, temp=1e-2, tmax=1, seed=666) {
 
   ### Start====
   require(LaplacesDemon)
@@ -13,15 +13,22 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
   ### Convert data to long format====
   if (is.null(levels)) levels <- max(x) + 1
   knots <- seq(0, 1, len=knot)
-  knots <- knots[-c(1,knot)]
   base_score <- as.vector(scale(rowMeans(x), center=(levels - 1) * .5))
   var_bscore <- (pnorm(base_score) * (1 - pnorm(base_score)) ) * (levels - 1)
-  len_basis <- knot + 1
+  if (is.null(basis)) {
+    len_basis = length(knots) + 3
+  } else if (basis == "b-spline") {
+    len_basis = length(knots) + 3
+  } else if (basis == "rademacher") {
+    len_basis = length(knots)
+  } else { stop("Unkown basis :(") }
   lonlong <- gather(data.frame(x), item, resp, colnames(x), factor_key=TRUE)
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
 
   ### Assemble data list====
-  mon.names  <- "LP"
+  if (method == "MAP") {
+    mon.names  <- "LL"
+  } else { mon.names  <- "LP" }
   parm.names <- as.parm.names(list( theta=rep(0,nrow(x)),
                                     b=rep(0,ncol(x) * len_basis) ))
   pos.theta  <- grep("theta", parm.names)
@@ -75,7 +82,7 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
       } else { stop("Unkown IRF :(") }
 
     } else if (basis == "rademacher") {
-      nKK <- seq(0, 1, len=Data$len_basis)
+      nKK <- Data$knots
       KK  <- t(matrix(nKK, nrow=length(nKK), ncol=length(thetaLL)))
       W   <- rowSums((((thetaLL < KK) * -2) + 1) * bLL)
       if (is.null(irf)) {
@@ -149,55 +156,85 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
                                Samples=Smpl, sir=T,
                                Stop.Tolerance=c(1e-5,1e-15),
                                Type="PSOCK", CPUs=CPUs)
+  } else if (method=="MAP") {
+    ## Maximum a Posteriori====
+    #Iters=100; Smpl=1000
+    Iters=Iters; Status=Iters/10
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData,
+               maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
   } else { stop('Unknown optimization method.') }
 
   ### Results====
   if (is.null(irf)) {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-    Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
-    rownames(Base) = colnames(x)
-    colnames(Base) = paste("Beta",1:len_basis,sep="_")
-    ICC <- lapply(1:nrow(Base), function(g) {
-      Pr <- plogis(
-        as.vector(crossprod(Base[g,],
-                            t((((plogis(seq(-3,3,len=100)) <
-                                   t(matrix(knots, nrow=len_basis, ncol=100))) * -2) +1)) )))
-      theta <- seq(-3,3,len=100)
-      return(data.frame(theta, Pr))
-    })
-  } else if (irf == "logit") {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-    Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
-    rownames(Base) = colnames(x)
-    colnames(Base) = paste("Beta",1:len_basis,sep="_")
-    ICC <- lapply(1:nrow(Base), function(g) {
-      Pr <- plogis(
-        as.vector(crossprod(Base[g,],
-                            t((((plogis(seq(-3,3,len=100)) <
-                                   t(matrix(knots, nrow=len_basis, ncol=100))) * -2) +1)) )))
-      theta <- seq(-3,3,len=100)
-      return(data.frame(theta, Pr))
-    })
-  } else if (irf == "sirm") {
-    abil = exp(Fit$Summary1[grep("theta", rownames(Fit$Summary1),
-                                 fixed=TRUE),1])
-    Base = exp(matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1),
-                                        fixed=TRUE),1], nrow=ncol(x)))
-    rownames(Base) = colnames(x)
-    colnames(Base) = paste("Beta",1:len_basis,sep="_")
-    ICC <- lapply(1:nrow(Base), function(g) {
-      Pr <- plogis(
-        as.vector(crossprod(Base[g,],
-                            t((((plogis(seq(exp(-3),exp(3),len=100)) <
-                                   t(matrix(knots, nrow=len_basis, ncol=100))) * -2) +1)) )))
-      theta <- seq(exp(-3),exp(3),len=100)
-      return(data.frame(theta, Pr))
-    })
-  } else { stop("Unkown IRF :(") }
-  Dev  = Fit$Deviance
-  DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      Base = matrix(Fit$parm[pos.b], nrow=ncol(x))
+      rownames(Base) = colnames(x)
+      colnames(Base) = paste("Beta",1:len_basis,sep="_")
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
 
-  Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                  'abil'=abil,'icc'=ICC,'DIC'=DIC)
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'base'=Base,'BIC'=BIC)
+
+    } else {
+      abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+      Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
+      rownames(Base) = colnames(x)
+      colnames(Base) = paste("Beta",1:len_basis,sep="_")
+      Dev  = Fit$Deviance
+      DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'base'=Base,'DIC'=DIC)
+    }
+
+  } else if (irf == "logit") {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      Base = matrix(Fit$parm[pos.b], nrow=ncol(x))
+      rownames(Base) = colnames(x)
+      colnames(Base) = paste("Beta",1:len_basis,sep="_")
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'base'=Base,'BIC'=BIC)
+
+    } else {
+    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+    Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
+    rownames(Base) = colnames(x)
+    colnames(Base) = paste("Beta",1:len_basis,sep="_")
+    Dev  = Fit$Deviance
+    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+
+    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                    'abil'=abil,'base'=Base,'DIC'=DIC)
+    }
+
+  } else if (irf == "sirm") {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      Base = matrix(Fit$parm[pos.b], nrow=ncol(x))
+      rownames(Base) = colnames(x)
+      colnames(Base) = paste("Beta",1:len_basis,sep="_")
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'base'=Base,'BIC'=BIC)
+
+    } else {
+    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1),
+                                 fixed=TRUE),1]
+    Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
+    rownames(Base) = colnames(x)
+    colnames(Base) = paste("Beta",1:len_basis,sep="_")
+    Dev  = Fit$Deviance
+    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+
+    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                    'abil'=abil,'base'=Base,'DIC'=DIC)
+    }
+  } else { stop("Unkown IRF :(") }
+
   return(Results)
 }

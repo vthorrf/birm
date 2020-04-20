@@ -13,7 +13,9 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
 
   ### Assemble data list====
-  mon.names  <- "LP"
+  if (method == "MAP") {
+    mon.names  <- "LL"
+  } else { mon.names  <- "LP" }
   parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x)) ))
   pos.theta  <- grep("theta", parm.names)
   pos.b      <- grep("b", parm.names)
@@ -95,15 +97,32 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000, Thin=1, A=500, seed=666){
                                Samples=Smpl, sir=T,
                                Stop.Tolerance=c(1e-5,1e-15),
                                Type="PSOCK", CPUs=CPUs)
+  } else if (method=="MAP") {
+    ## Maximum a Posteriori====
+    #Iters=100; Smpl=1000
+    Iters=Iters; Status=Iters/10
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData,
+               maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
   } else {stop('Unknown optimization method.')}
 
   ### Results====
-  abil = exp(Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1])
-  diff = exp(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1])
-  Dev  = Fit$Deviance
-  DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+  if (method=="MAP") {
+    abil = exp(Fit$parm[pos.theta])
+    diff = exp(Fit$parm[pos.b])
+    BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
 
-  Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                  'abil'=abil,'diff'=diff,'DIC'=DIC)
+    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                    'abil'=abil,'diff'=diff,'BIC'=BIC)
+
+  } else {
+    abil = exp(Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1])
+    diff = exp(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1])
+    Dev  = Fit$Deviance
+    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+
+    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                    'abil'=abil,'diff'=diff,'DIC'=DIC)
+
+  }
   return(Results)
 }

@@ -18,7 +18,9 @@ pcm <- function(x, levels=NULL, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, 
   if (p == 1) {
     ## Partial Credit Model====
     # Assemble data list
-    mon.names  <- "LP"
+    if (method == "MAP") {
+      mon.names  <- "LL"
+    } else { mon.names  <- "LP" }
     parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x) * levels) ))
     pos.theta  <- grep("theta", parm.names)
     pos.b      <- grep("b", parm.names)
@@ -172,31 +174,62 @@ pcm <- function(x, levels=NULL, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, 
                                Samples=Smpl, sir=T,
                                Stop.Tolerance=c(1e-5,1e-15),
                                Type="PSOCK", CPUs=CPUs)
+  } else if (method=="MAP") {
+    ## Maximum a Posteriori====
+    #Iters=100; Smpl=1000
+    Iters=Iters; Status=Iters/10
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData,
+               maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
   } else {stop('Unknown optimization method.')}
 
   ### Results====
   if (p == 1) {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-    diff = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
-    rownames(diff) = colnames(x)
-    colnames(diff) = paste("Answer_Key",1:levels,sep="_")
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 
-    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                    'abil'=abil,'diff'=diff,'DIC'=DIC)
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = matrix(Fit$parm[pos.b], nrow=ncol(x))
+      rownames(diff) = colnames(x)
+      colnames(diff) = paste("Answer_Key",1:levels,sep="_")
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,'BIC'=BIC)
+    } else {
+      abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+      diff = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
+      rownames(diff) = colnames(x)
+      colnames(diff) = paste("Answer_Key",1:levels,sep="_")
+      Dev  = Fit$Deviance
+      DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,'DIC'=DIC)
+    }
 
   } else if (p == 2) {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-    diff = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
-    rownames(diff) = colnames(x)
-    colnames(diff) = paste("Answer_Key",1:levels,sep="_")
-    disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 
-    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                    'abil'=abil,'diff'=diff,"disc"=disc,'DIC'=DIC)
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = matrix(Fit$parm[pos.b], nrow=ncol(x))
+      rownames(diff) = colnames(x)
+      colnames(diff) = paste("Answer_Key",1:levels,sep="_")
+      disc = Fit$parm[pos.Ds]
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,"disc"=disc,'BIC'=BIC)
+    } else {
+      abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+      diff = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
+      rownames(diff) = colnames(x)
+      colnames(diff) = paste("Answer_Key",1:levels,sep="_")
+      disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
+      Dev  = Fit$Deviance
+      DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,"disc"=disc,'DIC'=DIC)
+  }
 
   } else warning("Can't return any result :P")
 

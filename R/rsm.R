@@ -18,7 +18,9 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, 
   if (p == 1) {
     ## Rating Scale Model====
     # Assemble data list
-    mon.names  <- "LP"
+    if (method == "MAP") {
+      mon.names  <- "LL"
+    } else { mon.names  <- "LP" }
     parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x)),
                                       k=rep(0,levels) ))
     pos.theta  <- grep("theta", parm.names)
@@ -181,10 +183,25 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, 
                                Samples=Smpl, sir=T,
                                Stop.Tolerance=c(1e-5,1e-15),
                                Type="PSOCK", CPUs=CPUs)
+  } else if (method=="MAP") {
+    ## Maximum a Posteriori====
+    #Iters=100; Smpl=1000
+    Iters=Iters; Status=Iters/10
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData,
+               maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
   } else {stop('Unknown optimization method.')}
 
   ### Results====
   if (p == 1) {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = Fit$parm[pos.b]
+      k    = Fit$parm[pos.k]
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,"k"=k,'BIC'=BIC)
+    } else {
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
     k    = Fit$Summary1[grep("k", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -193,8 +210,18 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, 
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                     'abil'=abil,'diff'=diff,"k"=k,'DIC'=DIC)
-
+    }
   } else if (p == 2) {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = Fit$parm[pos.b]
+      k    = Fit$parm[pos.k]
+      disc = Fit$parm[pos.Ds]
+      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+
+      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
+                      'abil'=abil,'diff'=diff,"k"=k,"disc"=disc,'BIC'=BIC)
+    } else {
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
     k    = Fit$Summary1[grep("k", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -204,8 +231,8 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500, Smpl=1000, Thin=1, 
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                     'abil'=abil,'diff'=diff,"k"=k,"disc"=disc,'DIC'=DIC)
-
-  } else warning("Can't return any result :P")
+    }
+  } else stop("Can't return any result :P")
 
   return(Results)
 }
