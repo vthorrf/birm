@@ -9,6 +9,7 @@ This package should be considered experimental. Currently, the following models 
 
 * Rasch model (`rasch` function)
 * Partial and Generalized Partial Credit models (`pcm` function)
+* Rating and Generalized Rating Scale models (`rsm` function)
 * 1, 2, 3 and 4-Parameter Logistic models (`plm` function)
 * Strict Item Response model (`sirm` function)
 * Bayesian Optimal Scoring (`optscr` function)
