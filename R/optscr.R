@@ -1,6 +1,6 @@
 optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
                    method="VB", Iters=500, Smpl=1000, Thin=1,
-                   A=500, temp=1e-2, tmax=1, seed=666) {
+                   A=500, temp=1e-2, tmax=1, algo="SANN", seed=666) {
 
   ### Start====
   require(LaplacesDemon)
@@ -160,7 +160,7 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
     ## Maximum a Posteriori====
     #Iters=100; Smpl=1000
     Iters=Iters; Status=Iters/10
-    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData,
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData, algo=algo,
                maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
   } else { stop('Unknown optimization method.') }
 
