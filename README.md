@@ -1,7 +1,7 @@
 birm: Bayesian Item Response Models
 =============
 
-This package was developed acompanying the authors' PhD dissertation.
+This package is intended to be an "easy to use tool" for Bayesian Item Response Modeling. Currently, specific IRMs are implemented, but future versions will aim on adding more flexibility to the users.
 
 birm depends on LaplacesDemon.
 
@@ -21,7 +21,7 @@ All of the following estimation methods implemented in LaplacesDemon are availab
 * No-U-Turn Sampler (`method = "MCMC"` argument)
 * Population Monte Carlo (`method = "PMC"` argument)
 * Iterative Quadrature (`method = "IQ"` argument)
-* Maximum a Posteriori with Simulated Annealing (`method = "MAP"` argument; not originally implemented in LaplacesDemon)
+* Maximum a Posteriori estimation with Simulated Annealing or Genetic Algorithm (`method = "MAP"` and `algo=SANN` or `algo=GA`; not originally implemented in LaplacesDemon)
 
 # Installation #
 
