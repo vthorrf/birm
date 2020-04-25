@@ -5,10 +5,10 @@ simPLM <- function(n, v, l=NULL, p=1, scaling=1.7, seed=666,
   if (is.null(l)) l <- 2
   if (sequence==T){
     if (dist == "norm") {
-      sigma <- exp(seq(length=n,-3,3)); theta <- exp(seq(length=v,-3,3))
+      sigma <- seq(length=n,-3,3); theta <- seq(length=v,-3,3)
     } else if (dist == "beta") {
-      sigma <- seq(length=n, 1e-20, (1-(1e-20)))
-      theta <- seq(length=v, 1e-20, (1-(1e-20)))
+      sigma <- seq(length=n, .0027,.9973)
+      theta <- seq(length=v, .0027,.9973)
     } else stop("Unknow distribution for parameters :(")
 
   } else if (sequence == F) {

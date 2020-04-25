@@ -7,8 +7,8 @@ simRasch <- function(n, v ,l=NULL, seed=666, sequence=F, dist="norm",
     if (dist == "norm") {
       sigma <- seq(length=n,-3,3); theta <- seq(length=v,-3,3)
     } else if (dist == "beta") {
-      sigma <- seq(length=n, 1e-20, (1-(1e-20)))
-      theta <- seq(length=v, 1e-20, (1-(1e-20)))
+      sigma <- seq(length=n, .0027,.9973)
+      theta <- seq(length=v, .0027,.9973)
     } else stop("Unknow distribution for parameters :(")
 
   } else {
