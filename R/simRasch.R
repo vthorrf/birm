@@ -1,6 +1,7 @@
 simRasch <- function(n, v ,l=NULL, seed=666, sequence=F, dist="norm",
                      interaction=F, weight="normal"){
 
+  alpha=c(5,5); beta=c(5,5)
   set.seed(seed)
   if (is.null(l)) l <- 2
   if (sequence==T){
@@ -15,7 +16,7 @@ simRasch <- function(n, v ,l=NULL, seed=666, sequence=F, dist="norm",
     if (dist == "norm") {
       sigma <- rnorm(n, 0, 1); theta <- rnorm(v, 0, 1)
     } else if (dist == "beta") {
-      sigma <- rbeta(n, 1, 1); theta <- rbeta(v, 1, 1)
+      sigma <- rbeta(n, alpha[1], beta[1]); theta <- rbeta(v, alpha[2], beta[2])
     } else stop("Unknow distribution for parameters :(")
   }
 

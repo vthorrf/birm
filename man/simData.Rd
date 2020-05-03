@@ -5,7 +5,8 @@
 Simulate data from many different IRMs.
 }
 \usage{
-simData(n=NULL, v=NULL ,l=NULL, p=1, scaling=1.7, seed=666, sequence=F, model="rasch", dist="norm", interaction=F, weight="normal")
+simData(n=NULL, v=NULL ,l=NULL, p=1, scaling=1.7, seed=666, sequence=F,
+        model="rasch", dist="norm", interaction=F, weight="normal")
 }
 \arguments{
    \item{n}{Sample size.}
