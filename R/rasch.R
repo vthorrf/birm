@@ -2,15 +2,15 @@ rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
                   Thin=1, A=500, temp=1e-2, tmax=1, algo="SANN", seed=666){
 
   ### Start====
-  require(LaplacesDemon)
-  require(compiler)
-  require(parallel)
-  require(tidyr)
+  #require(LaplacesDemon)
+  #require(compiler)
+  #require(parallel)
+  #require(tidyr)
   CPUs = detectCores(all.tests = FALSE, logical = TRUE) - 1
   if(CPUs == 0) CPUs = 1
 
   ### Convert data to long format====
-  lonlong <- gather(data.frame(x), item, resp, colnames(x), factor_key=TRUE)
+  lonlong <- gather(data.frame(x), "item", "resp", colnames(x), factor_key=TRUE)
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
 
   ### Choose a model====
@@ -180,15 +180,15 @@ rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
   if (method=="MAP") {
     abil = Fit$parm[pos.theta]
     diff = Fit$parm[pos.b]
-    BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+    FI    = Fit$FI
 
     if (interaction == F) {
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                      'abil'=abil,'diff'=diff,'BIC'=BIC)
+                      'abil'=abil,'diff'=diff,'FitIndexes'=FI)
     } else {
       weight = Fit$parm[pos.delta]
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                      'abil'=abil,'diff'=diff,'weight'=weight,'BIC'=BIC)
+                      'abil'=abil,'diff'=diff,'weight'=weight,'FitIndexes'=FI)
     }
   } else {
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]

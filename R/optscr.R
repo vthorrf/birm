@@ -1,47 +1,56 @@
-optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
-                   method="VB", Iters=500, Smpl=1000, Thin=1,
-                   A=500, temp=1e-2, tmax=1, algo="SANN", seed=666) {
+optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, degree=3,
+                   method="VB", Iters=500, Smpl=1000, Thin=1, A=500, temp=1e-2,
+                   tmax=1, algo="SANN", seed=666){
 
   ### Start====
-  require(LaplacesDemon)
-  require(compiler)
-  require(parallel)
-  require(tidyr)
+  #require(LaplacesDemon)
+  #require(compiler)
+  #require(parallel)
+  #require(tidyr)
   CPUs = detectCores(all.tests = FALSE, logical = TRUE) - 1
   if(CPUs == 0) CPUs = 1
 
   ### Convert data to long format====
-  if (is.null(levels)) levels <- max(x) + 1
-  knots <- seq(0, 1, len=knot)
-  base_score <- as.vector(scale(rowMeans(x), center=(levels - 1) * .5))
-  var_bscore <- (pnorm(base_score) * (1 - pnorm(base_score)) ) * (levels - 1)
-  if (is.null(basis)) {
-    len_basis = length(knots) + 3
-  } else if (basis == "b-spline") {
-    len_basis = length(knots) + 3
-  } else if (basis == "rademacher") {
-    len_basis = length(knots)
-  } else { stop("Unkown basis :(") }
-  lonlong <- gather(data.frame(x), item, resp, colnames(x), factor_key=TRUE)
+  lonlong <- gather(data.frame(x), "item", "resp", colnames(x), factor_key=TRUE)
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
+  if (is.null(levels)) {
+    base_scor <- rowSums(x) / (max(x) * ncol(x))
+  } else base_scor <- rowSums(x) / ((levels-1) * ncol(x))
+  if (is.null(knots)) knots <- unique(sort(qtrunc(base_scor, "norm", a=-4, b=4)))
+  if (is.null(err)) {
+    err <- rep(1,nrow(x))
+  } else if(length(err) == nrow(x)) {
+    err <- err
+  } else stop("Error estimates for theta (err) are probably missing or are too many")
 
   ### Assemble data list====
   if (method == "MAP") {
     mon.names  <- "LL"
   } else { mon.names  <- "LP" }
-  parm.names <- as.parm.names(list( theta=rep(0,nrow(x)),
-                                    b=rep(0,ncol(x) * len_basis) ))
+  if(basis=="legendre") {
+    parm.names <- as.parm.names(list( kappa=rep(0,(degree+2) * ncol(x)),
+                                      theta=rep(0, nrow(x)) ))
+  } else if(basis=="rademacher") {
+    parm.names <- as.parm.names(list( kappa=rep(0,length(knots)*ncol(x)),
+                                      theta=rep(0, nrow(x))  ))
+  } else if(basis=="bs") {
+    parm.names <- as.parm.names(list( kappa=rep(0,(length(knots)+
+                                                   degree)*ncol(x)),
+                                                theta=rep(0, nrow(x)) ))
+  } else stop("Unknow basis type :/")
+  K          <- length(grep("kappa", parm.names))
+  pos.kappa  <- grep("kappa", parm.names)
   pos.theta  <- grep("theta", parm.names)
-  pos.b      <- grep("b", parm.names)
   PGF <- function(Data) {
-    theta <- rnorm(Data$n)
-    b     <- rlaplace(Data$len_basis * Data$v)
-    return(c(theta, b))
+    kappa <- rlaplace(Data$K, 0, 1)
+    theta <- rnorm(Data$n, Data$SS, Data$err)
+    return(c(kappa, theta))
   }
-  MyData <- list(parm.names=parm.names, mon.names=mon.names, levels=levels,
-                 PGF=PGF, X=data_long, n=nrow(x), v=ncol(x), len_basis=len_basis,
-                 base_score=base_score, var_bscore=var_bscore,
-                 pos.theta=pos.theta, pos.b=pos.b, knots=knots)
+  MyData <- list(parm.names=parm.names, mon.names=mon.names,
+                 PGF=PGF, X=data_long, n=nrow(x), v=ncol(x),
+                 pos.kappa=pos.kappa, pos.theta=pos.theta, K=K,
+                 SS=qtrunc(base_scor, "norm", a=-4, b=4),
+                 knots=knots, degree=degree, err=err)
   is.data(MyData)
 
   ### Model====
@@ -49,57 +58,47 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
 
     ## Prior parameters
     theta <- parm[Data$pos.theta]
-    b     <- parm[Data$pos.b]
+    kappa <- parm[Data$pos.kappa]
 
     ### Log-Priors
-    theta.prior <- sum(dnorm(theta, mean=Data$base_score, sd=sqrt(Data$var_bscore), log=T))
-    b.prior     <- sum(dlaplace(b, location=0, scale=10, log=T))
-    Lpp <- theta.prior + b.prior
+    theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=T))
+    kappa.prior <- sum(dlaplace(kappa, 0, 1, log=T))
+    Lpp <- kappa.prior + theta.prior
 
     ### Log-Likelihood
-    thetaLL <- pnorm( rep(theta, times=Data$v) )
-    BsL     <- rep(b    , each=Data$n)
-    bLL     <- matrix(BsL , nrow=nrow(Data$X), ncol=Data$len_basis)
-    #kLL     <- t(matrix(knots, nrow=Data$len_basis, ncol=nrow(Data$X)))
-    if (is.null(basis)) {
-      kLL <- as.matrix(splines::bs(thetaLL, knots=Data$knots))
-      if (is.null(irf)) {
-        IRF     <- plogis( rowSums( kLL * bLL ) )
-      } else if (irf == "logit") {
-        IRF     <- plogis( rowSums( kLL * bLL ) )
-      } else if (irf == "sirm") {
-        IRF     <- 1 / (1 + exp(rowSums( kLL * bLL )))
-      } else { stop("Unkown IRF :(") }
-
-    } else if (basis == "b-spline") {
-      kLL <- as.matrix(splines::bs(thetaLL, knots=Data$knots))
-      if (is.null(irf)) {
-        IRF     <- plogis( rowSums( kLL * bLL ) )
-      } else if (irf == "logit") {
-        IRF     <- plogis( rowSums( kLL * bLL ) )
-      } else if (irf == "sirm") {
-        IRF     <- 1 / (1 + exp(rowSums( kLL * bLL )))
-      } else { stop("Unkown IRF :(") }
-
-    } else if (basis == "rademacher") {
-      nKK <- Data$knots
-      KK  <- t(matrix(nKK, nrow=length(nKK), ncol=length(thetaLL)))
-      W   <- rowSums((((thetaLL < KK) * -2) + 1) * bLL)
-      if (is.null(irf)) {
-        IRF     <- plogis( W )
-      } else if (irf == "logit") {
-        IRF     <- plogis( W )
-      } else if (irf == "sirm") {
-        IRF     <- 1 / (1 + exp(W))
-      } else { stop("Unkown IRF :(") }
-
-    } else { stop("Unkown basis :(") }
-    LL      <- sum( dbinom(Data$X[,3], size=(Data$levels - 1), prob=IRF, log=T) )
+    if(basis=="legendre") {
+      ### Legendre Orthogonal Polynomials basis expansion
+      kLL   <- matrix(rep(kappa,each=Data$n),ncol=Data$degree+2)
+      pol   <- matrix(rep(poly(theta + Data$SS, degree=Data$degree), times=Data$v),
+                      ncol=Data$degree, nrow=Data$n * Data$v)
+      poll  <- cbind(1,theta,pol)
+      W       <- rowSums( kLL * poll )
+    } else if(basis=="rademacher") {
+      ### Rademacher basis expansion
+      kLL   <- matrix(rep(kappa,each=Data$n),ncol=length(Data$knots))
+      thetaSS <- rep(theta + Data$SS, times=Data$v)
+      thetaLL <- matrix(rep(thetaSS, times=length(Data$knots)),
+                        ncol=length(Data$knots))
+      RadBas  <- sign(sweep(thetaLL,2,Data$knots)) * kLL
+      W       <- rowSums(RadBas)
+    } else if(basis=="bs") {
+      ### B-spline basis expansion
+      kLL   <- matrix(rep(kappa,each=Data$n),ncol=(length(Data$knots)+
+                                                          Data$degree))
+      thetaSS <- splines::bs(theta + Data$SS, knots=Data$knots,
+                             degree=Data$degree)
+      BSP  <- matrix(rep(thetaSS, times=Data$v),
+                     ncol=Data$degree + length(Data$knots),
+                     nrow=Data$n * Data$v, byrow=T)
+      W       <- rowSums( kLL *BSP )
+    } else stop("Unknow basis type :/")
+    IRF     <- 1 / ( 1 + exp(-W) )
+    LL      <- sum( dbinom(Data$X[,3], size=max(Data$X[,3]), prob=IRF, log=T) )
 
     ### Log-Posterior
     LP <- LL + Lpp
     ### Estimates
-    yhat <- rbinom(length(IRF), size=(Data$levels - 1), prob=IRF)
+    yhat <- qbinom(rep(.5, length(IRF)), size=max(Data$X[,3]), prob=IRF)
     ### Output
     Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
     return(Modelout)
@@ -112,16 +111,12 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
   ### Run!====
   set.seed(seed)
   if (method=="VB") {
-    ## Variational Bayes====
-    #Iters=1000; Smpl=1000
     Iters=Iters; Smpl=Smpl
     Fit <- VariationalBayes(Model=Model, parm=Initial.Values, Data=MyData,
                             Covar=NULL, Interval=1e-6, Iterations=Iters,
                             Method="Salimans2", Samples=Smpl, sir=TRUE,
                             Stop.Tolerance=1e-5, CPUs=CPUs, Type="PSOCK")
   } else if (method=="LA") {
-    ## Laplace Approximation====
-    #Iters=100; Smpl=1000
     Iters=Iters; Smpl=Smpl
     Fit <- LaplaceApproximation(Model, parm=Initial.Values, Data=MyData,
                                 Interval=1e-6, Iterations=Iters,
@@ -129,8 +124,6 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
                                 CovEst="Identity", Stop.Tolerance=1e-5,
                                 CPUs=CPUs, Type="PSOCK")
   } else if (method=="MCMC") {
-    ## No-U-Turn Sampler====
-    #Iters=10000; Status=100; Thin=10; Ad=500; delta=.6
     Iters=Iters; Status=Iters/10; Thin=Thin; Ad=A
     Fit <- LaplacesDemon(Model=Model, Data=MyData,
                          Initial.Values=Initial.Values,
@@ -138,15 +131,11 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
                          Thinning=Thin, Algorithm="NUTS",
                          Specs=list(A=Ad,delta=0.6,epsilon=NULL,Lmax=Inf))
   } else if (method=="PMC") {
-    ## Population Monte Carlo====
-    #Iters=10; Thin=11; Smpl=1000
     Iters=Iters; Smpl=Smpl; Thin=Thin
     Fit <- PMC(Model=Model, Data=MyData, Initial.Values=Initial.Values,
                Covar=NULL, Iterations=Iters, Thinning=Thin, alpha=NULL,
                M=2, N=Smpl, nu=1e3, CPUs=CPUs, Type="PSOCK")
   } else if (method=="IQ") {
-    ## Iterative Quadrature====
-    #Iters=100; Smpl=1000
     Iters=Iters; Smpl=Smpl
     Fit <- IterativeQuadrature(Model=Model, parm=Initial.Values,
                                Data=MyData, Covar=NULL,
@@ -162,79 +151,57 @@ optscr <- function(x, levels=NULL, basis=NULL, knot=10, irf=NULL,
     Iters=Iters; Status=Iters/10
     Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData, algo=algo,
                maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
-  } else { stop('Unknown optimization method.') }
+  } else {stop('Unknown optimization method.')}
 
   ### Results====
-  if (is.null(irf)) {
-    if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      Base = matrix(Fit$parm[pos.b], nrow=ncol(x))
-      rownames(Base) = colnames(x)
-      colnames(Base) = paste("Beta",1:len_basis,sep="_")
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
-
-      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                      'abil'=abil,'base'=Base,'BIC'=BIC)
-
-    } else {
-      abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-      Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
-      rownames(Base) = colnames(x)
-      colnames(Base) = paste("Beta",1:len_basis,sep="_")
-      Dev  = Fit$Deviance
-      DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
-
-      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                      'abil'=abil,'base'=Base,'DIC'=DIC)
-    }
-
-  } else if (irf == "logit") {
-    if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      Base = matrix(Fit$parm[pos.b], nrow=ncol(x))
-      rownames(Base) = colnames(x)
-      colnames(Base) = paste("Beta",1:len_basis,sep="_")
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
-
-      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                      'abil'=abil,'base'=Base,'BIC'=BIC)
-
-    } else {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-    Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
-    rownames(Base) = colnames(x)
-    colnames(Base) = paste("Beta",1:len_basis,sep="_")
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+  if (method=="MAP") {
+    ppkp <- Fit$parm[pos.kappa]
+    if(basis=="legendre") {
+      kappa  = matrix(ppkp,ncol=(degree+2))
+      rownames(kappa) <- colnames(x)
+      colnames(kappa) <- paste("Kappa_",1:(degree+2),sep="")
+    } else if(basis=="rademacher") {
+      kappa  = matrix(ppkp,ncol=length(knots))
+      rownames(kappa) <- colnames(x)
+      colnames(kappa) <- paste("Kappa_",1:length(knots),sep="")
+    } else if(basis=="bs") {
+      kappa  = matrix(ppkp,ncol=(length(knots)+degree))
+      rownames(kappa) <- colnames(x)
+      colnames(kappa) <- paste("Kappa_",1:(length(knots)+degree),sep="")
+    } else stop("Unknow basis type :/")
+    abil <- Fit$parm[pos.theta] + qtrunc(base_scor, "norm", a=-4, b=4)
+    FI    = Fit$FI
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                    'abil'=abil,'base'=Base,'DIC'=DIC)
-    }
+                    'abil'=abil, 'kappa'=kappa,'FitIndexes'=FI)
 
-  } else if (irf == "sirm") {
-    if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      Base = matrix(Fit$parm[pos.b], nrow=ncol(x))
-      rownames(Base) = colnames(x)
-      colnames(Base) = paste("Beta",1:len_basis,sep="_")
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
-
-      Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                      'abil'=abil,'base'=Base,'BIC'=BIC)
-
-    } else {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1),
-                                 fixed=TRUE),1]
-    Base = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1], nrow=ncol(x))
-    rownames(Base) = colnames(x)
-    colnames(Base) = paste("Beta",1:len_basis,sep="_")
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+  } else {
+    ppkp <- Fit$Summary1[grep("kappa", rownames(Fit$Summary1), fixed=TRUE),1]
+    if(basis=="legendre") {
+      kappa  = matrix(ppkp,ncol=(degree+2))
+      rownames(kappa) <- colnames(x)
+      colnames(kappa) <- paste("Kappa_",1:(degree+2),sep="")
+    } else if(basis=="rademacher") {
+      kappa  = matrix(ppkp,ncol=length(knots))
+      rownames(kappa) <- colnames(x)
+      colnames(kappa) <- paste("Kappa_",1:length(knots),sep="")
+    } else if(basis=="bs") {
+      kappa  = matrix(ppkp,ncol=(length(knots)+degree))
+      rownames(kappa) <- colnames(x)
+      colnames(kappa) <- paste("Kappa_",1:(length(knots)+degree),sep="")
+    } else stop("Unknow basis type :/")
+    abil <- Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1] +
+            qtrunc(base_scor, "norm", a=-4, b=4)
+    Dev   = Fit$Deviance
+    DIC   = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                    'abil'=abil,'base'=Base,'DIC'=DIC)
-    }
-  } else { stop("Unkown IRF :(") }
+                    'abil'=abil,'kappa'=kappa,'DIC'=DIC)
+
+  }
 
   return(Results)
+
+  FI
+  cor(abil, data$abil, method="s")
 }

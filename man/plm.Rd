@@ -13,7 +13,7 @@ plm(x, p=1, scaling=1.7, method="VB", Iters=500, Smpl=1000,
    \item{p}{Indicates which model will be fitted. When p = 1, the function returns the One-Parameter Logistic Model (1PLM). When p = 2, the function returns the 2PLM. p = 3 returns the 3PLM and p = 4 returns the 4PLM.}
    \item{scaling}{The scaling parameter for when fitting the one-parameter logistic model (p = 1).}
    \item{method}{The Bayesian estimation method to be used. Defaults to "VB" Variational Bayes. It can also be Laplace Approximation ("LA"), MCMC No-U-Turn Sampler ("MCMC"), Population Monte Carlo ("PMC"), Iterative Quadrature ("IQ"), or Maximum a Posteriori with SANN ("MAP").}
-   \item{Iters}{The maximum number of iterations. The default value, 500, is proposed for the default estimation method, "VB". For method "LA", we suggest 100 as the default. For method "MCMC", 20000. For method "PMC", 10. For method "IQ", 100. Finally, for method "MAP", if the algo="SANN" 50000, but if algo="GA" it is not used.}
+   \item{Iters}{The maximum number of iterations. The default value, 500, is proposed for the default estimation method, "VB". For method "LA", we suggest 100 as the default. For method "MCMC", 20000. For method "PMC", 10. For method "IQ", 100. Finally, for method "MAP", if algo="SANN", than 50000, but if algo="GA", than 500.}
    \item{Smpl}{This argument indicates the number of posterior samples to be taken with sampling importance resampling for the estimation methods "IQ","LA", and "VB". For the "PMC" method, this is the number of samples per mixture component. This argument is not used by both the "MCMC" and the "MAP" methods. The default value, 1000, is already fit for all the estimation methods that use this argument.}
    \item{Thin}{This is the number by which the posterior is thinned. Only "MCMC" and "PMC" estimation methods use this argument.}
    \item{A}{A is used only by the "MCMC" method. It is the number of initial, adaptive iterations to be discarded as burn-in. The value defaults to 500.}
@@ -39,11 +39,11 @@ A list containing the following components:
 n = 100; v = 10; l = 2
 Data <- simData(n, v, l)$data
 # 1PLM
-fit1  <- plm(Data, p=1, scaling=1.7, method="LA", Iters=100, Smpl=1000)
+fit1  <- plm(Data, p=1, scaling=1.7, method="MAP", algo="GA", Iters=250)
 # 2PLM
-fit2  <- plm(Data, p=2, method="LA", Iters=100, Smpl=1000)
+fit2  <- plm(Data, p=2, method="MAP", algo="GA", Iters=250)
 # 3PLM
-fit3  <- plm(Data, p=3, method="LA", Iters=100, Smpl=1000)
+fit3  <- plm(Data, p=3, method="MAP", algo="GA", Iters=250)
 # 4PLM
-fit4  <- plm(Data, p=4, method="LA", Iters=100, Smpl=1000)
+fit4  <- plm(Data, p=4, method="MAP", algo="GA", Iters=250)
 }

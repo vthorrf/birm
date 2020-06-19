@@ -1,9 +1,9 @@
-GA <- function(Model, Data) {
+GA <- function(Model, Data, maxit) {
   print("Initiating MAP estimation with GA algorithm")
   #want = c("GA")
   #have = want %in% rownames(installed.packages())
   #if ( any(!have) ) { install.packages( want[!have] ) }
-  suppressMessages(require(GA))
+  #suppressMessages(require(GA))
 
   LogPost <- function(para) {
     LP <- Model(para[1:length(Data$parm.names)], Data)
@@ -12,6 +12,7 @@ GA <- function(Model, Data) {
   estimates <- ga("real-valued", fitness = LogPost,
                   lower=rep(-5,length(Data$parm.names)),
                   upper=rep(5,length(Data$parm.names)),
-                  names=Data$parm.names, monitor=T)
+                  names=Data$parm.names, monitor=T,
+                  maxiter=maxit)
   return(Model(estimates@solution, Data))
 }

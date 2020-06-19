@@ -3,15 +3,15 @@ plm <- function(x, p=1, scaling=1.7, method="VB",
                 Thin=1, A=500, temp=1e-2, tmax=1, algo="SANN", seed=666){
 
   ### Start====
-  require(LaplacesDemon)
-  require(compiler)
-  require(parallel)
-  require(tidyr)
+  #require(LaplacesDemon)
+  #require(compiler)
+  #require(parallel)
+  #require(tidyr)
   CPUs = detectCores(all.tests = FALSE, logical = TRUE) - 1
   if(CPUs == 0) CPUs = 1
 
   ### Convert data to long format====
-  lonlong <- gather(data.frame(x), item, resp, colnames(x), factor_key=TRUE)
+  lonlong <- gather(data.frame(x), "item", "resp", colnames(x), factor_key=TRUE)
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
 
   ### Choose Model====
@@ -316,10 +316,10 @@ plm <- function(x, p=1, scaling=1.7, method="VB",
       abil = Fit$parm[pos.theta]
       diff = Fit$parm[pos.b]
       disc = Fit$parm[pos.Ds]
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+      FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
-                      'abil'=abil,'diff'=diff,"disc"=disc,'BIC'=BIC)
+                      'abil'=abil,'diff'=diff,"disc"=disc,'FitIndexes'=FI)
     } else {
     ## One-parameter logistic====
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -336,10 +336,10 @@ plm <- function(x, p=1, scaling=1.7, method="VB",
       abil = Fit$parm[pos.theta]
       diff = Fit$parm[pos.b]
       disc = Fit$parm[pos.Ds]
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+      FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
-                      'abil'=abil,'diff'=diff,"disc"=disc,'BIC'=BIC)
+                      'abil'=abil,'diff'=diff,"disc"=disc,'FitIndexes'=FI)
     } else {
     ## Two-parameter logistic====
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -357,10 +357,10 @@ plm <- function(x, p=1, scaling=1.7, method="VB",
       diff = Fit$parm[pos.b]
       disc = Fit$parm[pos.Ds]
       gues = Fit$parm[pos.c]
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+      FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
-                      'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,'BIC'=BIC)
+                      'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,'FitIndexes'=FI)
     } else {
     ## Three-parameter logistic====
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -380,11 +380,11 @@ plm <- function(x, p=1, scaling=1.7, method="VB",
       disc = Fit$parm[pos.Ds]
       gues = Fit$parm[pos.c]
       UpAs = Fit$parm[pos.UA]
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+      FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                       'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,
-                      "UpAs"=UpAs,'BIC'=BIC)
+                      "UpAs"=UpAs,'FitIndexes'=FI)
     } else {
     ## Four-parameter logistic====
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]

@@ -2,17 +2,17 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500,
                 Smpl=1000, Thin=1, A=500, temp=1e-2, tmax=1, algo="SANN", seed=666){
 
   ### Start====
-  require(LaplacesDemon)
-  require(compiler)
-  require(parallel)
-  require(tidyr)
-  require(matrixStats)
+  #require(LaplacesDemon)
+  #require(compiler)
+  #require(parallel)
+  #require(tidyr)
+  #require(matrixStats)
   CPUs = detectCores(all.tests = FALSE, logical = TRUE) - 1
   if(CPUs == 0) CPUs = 1
 
   ### Convert data to long format====
   if (is.null(levels)) levels <- max(x)
-  lonlong <- gather(data.frame(x), item, resp, colnames(x), factor_key=TRUE)
+  lonlong <- gather(data.frame(x), "item", "resp", colnames(x), factor_key=TRUE)
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
 
   ### Choose model====
@@ -198,10 +198,10 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500,
       abil = Fit$parm[pos.theta]
       diff = Fit$parm[pos.b]
       k    = Fit$parm[pos.k]
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+      FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                      'abil'=abil,'diff'=diff,"k"=k,'BIC'=BIC)
+                      'abil'=abil,'diff'=diff,"k"=k,'FitIndexes'=FI)
     } else {
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
@@ -218,10 +218,10 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500,
       diff = Fit$parm[pos.b]
       k    = Fit$parm[pos.k]
       disc = Fit$parm[pos.Ds]
-      BIC  = (log(nrow(x)) * length(parm.names)) - (2 * Fit$Monitor)
+      FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                      'abil'=abil,'diff'=diff,"k"=k,"disc"=disc,'BIC'=BIC)
+                      'abil'=abil,'diff'=diff,"k"=k,"disc"=disc,'FitIndexes'=FI)
     } else {
     abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
