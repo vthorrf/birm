@@ -1,6 +1,6 @@
-optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, degree=3,
-                   method="VB", Iters=500, Smpl=1000, Thin=1, A=500, temp=1e-2,
-                   tmax=1, algo="SANN", seed=666){
+optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL,
+                   degree=3, method="VB", Iters=500, Smpl=1000, Thin=1, A=500,
+                   temp=1e-2, tmax=1, algo="SANN", seed=666){
 
   ### Start====
   #require(LaplacesDemon)
@@ -18,7 +18,7 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
   } else base_scor <- rowSums(x) / ((levels-1) * ncol(x))
   if (is.null(knots)) knots <- unique(sort(qtrunc(base_scor, "norm", a=-4, b=4)))
   if (is.null(err)) {
-    err <- rep(1,nrow(x))
+    err <- rep(1e-2,nrow(x))
   } else if(length(err) == nrow(x)) {
     err <- err
   } else stop("Error estimates for theta (err) are probably missing or are too many")
@@ -37,7 +37,11 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
     parm.names <- as.parm.names(list( kappa=rep(0,(length(knots)+
                                                    degree)*ncol(x)),
                                                 theta=rep(0, nrow(x)) ))
-  } else stop("Unknow basis type :/")
+  } else if(basis=="nn"){
+    parm.names <- as.parm.names(list( kappa=rep(0, M * ncol(x) * 2),
+                                      theta=rep(0, nrow(x)) ))
+
+  }else stop("Unknow basis type :/")
   K          <- length(grep("kappa", parm.names))
   pos.kappa  <- grep("kappa", parm.names)
   pos.theta  <- grep("theta", parm.names)
@@ -49,7 +53,7 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
   MyData <- list(parm.names=parm.names, mon.names=mon.names,
                  PGF=PGF, X=data_long, n=nrow(x), v=ncol(x),
                  pos.kappa=pos.kappa, pos.theta=pos.theta, K=K,
-                 SS=qtrunc(base_scor, "norm", a=-4, b=4),
+                 SS=qtrunc(base_scor, "norm", a=-4, b=4), M=M,
                  knots=knots, degree=degree, err=err)
   is.data(MyData)
 
@@ -61,7 +65,7 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
     kappa <- parm[Data$pos.kappa]
 
     ### Log-Priors
-    theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=T))
+    theta.prior <- sum(dnorm(theta, mean=Data$SS, sd=Data$err, log=T))
     kappa.prior <- sum(dlaplace(kappa, 0, 1, log=T))
     Lpp <- kappa.prior + theta.prior
 
@@ -69,14 +73,14 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
     if(basis=="legendre") {
       ### Legendre Orthogonal Polynomials basis expansion
       kLL   <- matrix(rep(kappa,each=Data$n),ncol=Data$degree+2)
-      pol   <- matrix(rep(poly(theta + Data$SS, degree=Data$degree), times=Data$v),
+      pol   <- matrix(rep(poly(theta, degree=Data$degree), times=Data$v),
                       ncol=Data$degree, nrow=Data$n * Data$v)
       poll  <- cbind(1,theta,pol)
       W       <- rowSums( kLL * poll )
     } else if(basis=="rademacher") {
       ### Rademacher basis expansion
       kLL   <- matrix(rep(kappa,each=Data$n),ncol=length(Data$knots))
-      thetaSS <- rep(theta + Data$SS, times=Data$v)
+      thetaSS <- rep(theta, times=Data$v)
       thetaLL <- matrix(rep(thetaSS, times=length(Data$knots)),
                         ncol=length(Data$knots))
       RadBas  <- sign(sweep(thetaLL,2,Data$knots)) * kLL
@@ -84,14 +88,22 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
     } else if(basis=="bs") {
       ### B-spline basis expansion
       kLL   <- matrix(rep(kappa,each=Data$n),ncol=(length(Data$knots)+
-                                                          Data$degree))
+                                                     Data$degree))
       thetaSS <- splines::bs(theta + Data$SS, knots=Data$knots,
                              degree=Data$degree)
       BSP  <- matrix(rep(thetaSS, times=Data$v),
                      ncol=Data$degree + length(Data$knots),
                      nrow=Data$n * Data$v, byrow=T)
       W       <- rowSums( kLL *BSP )
-    } else stop("Unknow basis type :/")
+    } else if(basis=="nn"){
+      ### Neural Network
+      inLL  <- matrix(rep(kappa[1:(Data$K/2)],each=Data$n),ncol=Data$M)
+      pol   <- matrix(rep(theta, times=Data$v), ncol=Data$M,
+                      nrow=Data$n * Data$v)
+      otLL  <- matrix(rep(kappa[((Data$K/2)+1):Data$K],each=Data$n),ncol=Data$M)
+      W       <- rowSums( plogis(inLL * pol) * otLL )
+
+    }else stop("Unknow basis type :/")
     IRF     <- 1 / ( 1 + exp(-W) )
     LL      <- sum( dbinom(Data$X[,3], size=max(Data$X[,3]), prob=IRF, log=T) )
 
@@ -168,8 +180,15 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
       kappa  = matrix(ppkp,ncol=(length(knots)+degree))
       rownames(kappa) <- colnames(x)
       colnames(kappa) <- paste("Kappa_",1:(length(knots)+degree),sep="")
-    } else stop("Unknow basis type :/")
-    abil <- Fit$parm[pos.theta] + qtrunc(base_scor, "norm", a=-4, b=4)
+    } else if(basis=="nn"){
+      kappain  <- matrix(ppkp[1:(K/2)],ncol=M)
+      kappaout <- matrix(ppkp[((K/2)+1):K],ncol=M)
+      rownames(kappain) <- rownames(kappaout) <- colnames(x)
+      colnames(kappain) <- paste("Kappa_IN_",1:M,sep="")
+      colnames(kappaout) <- paste("Kappa_OUT_",1:M,sep="")
+      kappa    <- list(kappain, kappaout)
+    }else stop("Unknow basis type :/")
+    abil <- Fit$parm[pos.theta]
     FI    = Fit$FI
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
@@ -189,9 +208,15 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
       kappa  = matrix(ppkp,ncol=(length(knots)+degree))
       rownames(kappa) <- colnames(x)
       colnames(kappa) <- paste("Kappa_",1:(length(knots)+degree),sep="")
-    } else stop("Unknow basis type :/")
-    abil <- Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1] +
-            qtrunc(base_scor, "norm", a=-4, b=4)
+    } else if(basis=="nn"){
+      kappain  <- matrix(ppkp[1:(K/2)],ncol=M)
+      kappaout <- matrix(ppkp[((K/2)+1):K],ncol=M)
+      rownames(kappain) <- rownames(kappaout) <- colnames(x)
+      colnames(kappain) <- paste("Kappa_IN_",1:M,sep="")
+      colnames(kappaout) <- paste("Kappa_OUT_",1:M,sep="")
+      kappa    <- list(kappain, kappaout)
+    }else stop("Unknow basis type :/")
+    abil <- Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
     Dev   = Fit$Deviance
     DIC   = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 
@@ -199,9 +224,5 @@ optscr <- function(x, levels=NULL, basis="rademacher", err=NULL, knots=NULL, deg
                     'abil'=abil,'kappa'=kappa,'DIC'=DIC)
 
   }
-
   return(Results)
-
-  FI
-  cor(abil, data$abil, method="s")
 }

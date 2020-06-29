@@ -5,13 +5,16 @@
 An Bayesian implementation of the Optimal Scoring prodecure.
 }
 \usage{
-optscr(x, levels=NULL, basis="rademacher", knots=NULL, degree=3, method="VB", Iters=500,
-       Smpl=1000, Thin=1, A=500, temp=1e-2, tmax=1, algo="SANN", seed=666)
+optscr(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL,
+       degree=3, method="VB", Iters=500, Smpl=1000, Thin=1, A=500,
+       temp=1e-2, tmax=1, algo="SANN", seed=666)
 }
 \arguments{
    \item{x}{A matrix in the wide format. You should certify that: the minimum possible score is 0; all variables are named; and that are only variables to be modeled.}
+   \item{M}{The number of hidden nodes for the single layer when the argument "basis"" is equal to "nn". Defaults to 5.}
    \item{levels}{The number of responses keys in the scale. If no value is inserted, the function assumes that the maximum value in x is the number of levels.}
-   \item{basis}{What basis expansion to use. It can be "bs", for b-spline, "rademacher", or "legendre". Defaults to "rademacher".}
+   \item{basis}{What basis expansion to use. It can be "bs", for b-spline, "rademacher", "legendre", or "nn", for neural network. Defaults to "rademacher".}
+   \item{err}{A vector of error estimates for true scores. Defaults to 1e-2 for all scores.}
    \item{knots}{A vector of knots to be used with the basis expansion. If no knots are provided, a default vector, based on the unique values observed from the sum scores, is used.}
    \item{degree}{Degree of the piecewise ("bs") or orthogonal ("legendre") polynomial basis. Default is 3.}
    \item{method}{The Bayesian estimation method to be used. Defaults to "VB" Variational Bayes. It can also be Laplace Approximation ("LA"), MCMC No-U-Turn Sampler ("MCMC"), Population Monte Carlo ("PMC"), Iterative Quadrature ("IQ"), or Maximum a Posteriori with SANN ("MAP").}
