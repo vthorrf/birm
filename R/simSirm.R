@@ -13,7 +13,7 @@ simSirm <- function(n, v, l=NULL, seed=666, sequence=F, dist="norm"){
 
   } else if (sequence == F) {
     if (dist == "norm") {
-      sigma <- exp(rnorm(n, 0, 1)); theta <- exp(rnorm(v, 0, 1))
+      sigma <- rlnorm(n, 0, 1); theta <- rlnorm(v, 0, 1)
     } else if (dist == "beta") {
       sigma <- rbeta(n, alpha[1], beta[1]); theta <- rbeta(v, alpha[2], beta[2])
     } else stop("Unknow distribution for parameters :(")
