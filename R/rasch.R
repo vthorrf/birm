@@ -54,7 +54,7 @@ rasch <- function(x, interaction=F, method="LA", Iters=100, Smpl=1000,
       ### Log-Posterior
       LP <- LL + Lpp
       ### Estimates
-      yhat <- rbinom(length(IRF), size=1, prob=IRF)
+      yhat <- qbinom(rep(.5, length(IRF)), size=1, prob=IRF)
       ### Output
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)
@@ -109,7 +109,7 @@ rasch <- function(x, interaction=F, method="LA", Iters=100, Smpl=1000,
       ### Log-Posterior
       LP <- LL + Lpp
       ### Estimates
-      yhat <- rbinom(length(IRF), size=1, prob=IRF)
+      yhat <- qbinom(rep(.5, length(IRF)), size=1, prob=IRF)
       ### Output
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)

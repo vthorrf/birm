@@ -59,7 +59,7 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       ### Log-Posterior
       LP <- LL + Lpp
       ### Estimates
-      yhat <- rcat(nrow(IRF),p=IRF)
+      yhat <- qcat(rep(.5, nrow(IRF)), p=IRF)
       ### Output
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)
@@ -116,7 +116,7 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       ### Log-Posterior
       LP <- LL + Lpp
       ### Estimates
-      yhat <- rcat(nrow(IRF),p=IRF)
+      yhat <- qcat(rep(.5, nrow(IRF)), p=IRF)
       ### Output
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)
