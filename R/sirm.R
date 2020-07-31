@@ -1,5 +1,5 @@
 sirm <- function(x, method="VB", Iters=500, Smpl=1000,
-                 Thin=1, A=500, temp=1e-2, tmax=1, algo="SANN", seed=666){
+                 Thin=1, A=500, temp=1e-2, tmax=1, algo="GA", seed=666){
 
   ### Start====
   #require(LaplacesDemon)
@@ -34,17 +34,17 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000,
   Model <- function(parm, Data){
 
     ## Prior parameters
-    theta <- parm[Data$pos.theta]
-    b     <- parm[Data$pos.b]
+    theta <- exp(parm[Data$pos.theta])
+    b     <- exp(parm[Data$pos.b])
 
     ### Log-Priors
-    theta.prior <- sum(dnorm(theta, mean=0, sd=10, log=TRUE))
-    b.prior     <- sum(dnorm(b, mean=0, sd=10, log=T))
+    theta.prior <- sum(dlnorm(theta, meanlog=0, sdlog=1, log=T))
+    b.prior     <- sum(dlnorm(b    , meanlog=0, sdlog=1, log=T))
     Lpp <- theta.prior + b.prior
 
     ### Log-Likelihood
-    thetaLL <- exp(rep(theta, times=Data$v))
-    bLL     <- exp(rep(b    , each=Data$n))
+    thetaLL <- rep(theta, times=Data$v)
+    bLL     <- rep(b    , each=Data$n)
     #IRF     <- thetaLL / ( thetaLL + bLL )
     IRF     <- 1 / ( 1 + (bLL / thetaLL) )
     LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
@@ -109,16 +109,16 @@ sirm <- function(x, method="VB", Iters=500, Smpl=1000,
 
   ### Results====
   if (method=="MAP") {
-    abil = exp(Fit$parm[pos.theta])
-    diff = exp(Fit$parm[pos.b])
+    abil = Fit$parm[pos.theta]
+    diff = Fit$parm[pos.b]
     FI    = Fit$FI
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                     'abil'=abil,'diff'=diff,'FitIndexes'=FI)
 
   } else {
-    abil = exp(Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1])
-    diff = exp(Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1])
+    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+    diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
     Dev  = Fit$Deviance
     DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 

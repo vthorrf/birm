@@ -1,6 +1,6 @@
 pcm <- function(x, levels=NULL, p=1, method="VB",
                 Iters=500, Smpl=1000, Thin=1,
-                A=500, temp=1e-2, tmax=1, algo="SANN", seed=666){
+                A=500, temp=1e-2, tmax=1, algo="GA", seed=666){
 
   ### Start====
   #require(LaplacesDemon)

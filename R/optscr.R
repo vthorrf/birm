@@ -1,6 +1,6 @@
 optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL,
                    degree=3, method="VB", Iters=500, Smpl=1000, Thin=1, A=500,
-                   temp=1e-2, tmax=1, algo="SANN", seed=666){
+                   temp=1e-2, tmax=1, algo="GA", seed=666){
 
   ### Start====
   #require(LaplacesDemon)
@@ -18,7 +18,7 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   } else base_scor <- rowSums(x) / ((levels-1) * ncol(x))
   if (is.null(knots)) knots <- unique(sort(qtrunc(base_scor, "norm", a=-4, b=4)))
   if (is.null(err)) {
-    err <- rep(1e-2,nrow(x))
+    err <- rep(1e-4,nrow(x))
   } else if(length(err) == nrow(x)) {
     err <- err
   } else stop("Error estimates for theta (err) are probably missing or are too many")
@@ -36,7 +36,7 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   } else if(basis=="bs") {
     parm.names <- as.parm.names(list( kappa=rep(0,(length(knots)+
                                                    degree)*ncol(x)),
-                                                theta=rep(0, nrow(x)) ))
+                                      theta=rep(0, nrow(x)) ))
   } else if(basis=="nn"){
     parm.names <- as.parm.names(list( kappa=rep(0, M * ncol(x) * 2),
                                       theta=rep(0, nrow(x)) ))
@@ -47,8 +47,44 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   pos.theta  <- grep("theta", parm.names)
   PGF <- function(Data) {
     kappa <- rlaplace(Data$K, 0, 1)
-    theta <- rnorm(Data$n, Data$SS, Data$err)
+    theta <- rtrunc(Data$n, "norm", -4, 4, mean=Data$SS, sd=Data$err)
     return(c(kappa, theta))
+  }
+  LLfn   <- function(theta, kappa, knots, degree, n, v, SS, K, M) {
+    if(basis=="legendre") {
+      ### Legendre Orthogonal Polynomials basis expansion
+      kLL   <- matrix(rep(kappa,each=n),ncol=degree+2)
+      pol   <- matrix(rep(poly(theta, degree=degree), times=v),
+                      ncol=degree, nrow=n * v)
+      poll  <- cbind(1,theta,pol)
+      W       <- rowSums( kLL * poll )
+    } else if(basis=="rademacher") {
+      ### Rademacher basis expansion
+      kLL   <- matrix(rep(kappa,each=n),ncol=length(knots))
+      thetaSS <- rep(theta, times=v)
+      thetaLL <- matrix(rep(thetaSS, times=length(knots)),
+                        ncol=length(knots))
+      RadBas  <- sign(sweep(thetaLL,2,knots)) * kLL
+      W       <- rowSums(RadBas)
+    } else if(basis=="bs") {
+      ### B-spline basis expansion
+      kLL   <- matrix(rep(kappa,each=n),ncol=(length(knots)+
+                                                     degree))
+      thetaSS <- splines::bs(theta + SS, knots=knots,
+                             degree=degree)
+      BSP  <- matrix(rep(thetaSS, times=v),
+                     ncol=degree + length(knots),
+                     nrow=n * v, byrow=T)
+      W       <- rowSums( kLL *BSP )
+    } else if(basis=="nn"){
+      ### Neural Network
+      inLL  <- matrix(rep(kappa[1:(K/2)],each=n),ncol=M)
+      pol   <- matrix(rep(theta, times=v), ncol=M,
+                      nrow=n * v)
+      otLL  <- matrix(rep(kappa[((K/2)+1):K],each=n),ncol=M)
+      W       <- rowSums( plogis(inLL * pol) * otLL )
+    }else stop("Unknow basis type :/")
+    return(W)
   }
   MyData <- list(parm.names=parm.names, mon.names=mon.names,
                  PGF=PGF, X=data_long, n=nrow(x), v=ncol(x),
@@ -61,49 +97,19 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   Model <- function(parm, Data){
 
     ## Prior parameters
-    theta <- parm[Data$pos.theta]
-    kappa <- parm[Data$pos.kappa]
+    theta <- interval(parm[Data$pos.theta], -4, 4)
+    parm[Data$pos.theta] <- theta
+    kappa <- tanh(parm[Data$pos.kappa])
 
     ### Log-Priors
-    theta.prior <- sum(dnorm(theta, mean=Data$SS, sd=Data$err, log=T))
-    kappa.prior <- sum(dlaplace(kappa, 0, 1, log=T))
+    theta.prior <- sum(dtrunc(theta, "norm",    -4, 4, mean=Data$SS,
+                              sd=Data$err, log=T))
+    kappa.prior <- sum(dlaplace(atanh(kappa), 0, 1, log=T))
     Lpp <- kappa.prior + theta.prior
 
     ### Log-Likelihood
-    if(basis=="legendre") {
-      ### Legendre Orthogonal Polynomials basis expansion
-      kLL   <- matrix(rep(kappa,each=Data$n),ncol=Data$degree+2)
-      pol   <- matrix(rep(poly(theta, degree=Data$degree), times=Data$v),
-                      ncol=Data$degree, nrow=Data$n * Data$v)
-      poll  <- cbind(1,theta,pol)
-      W       <- rowSums( kLL * poll )
-    } else if(basis=="rademacher") {
-      ### Rademacher basis expansion
-      kLL   <- matrix(rep(kappa,each=Data$n),ncol=length(Data$knots))
-      thetaSS <- rep(theta, times=Data$v)
-      thetaLL <- matrix(rep(thetaSS, times=length(Data$knots)),
-                        ncol=length(Data$knots))
-      RadBas  <- sign(sweep(thetaLL,2,Data$knots)) * kLL
-      W       <- rowSums(RadBas)
-    } else if(basis=="bs") {
-      ### B-spline basis expansion
-      kLL   <- matrix(rep(kappa,each=Data$n),ncol=(length(Data$knots)+
-                                                     Data$degree))
-      thetaSS <- splines::bs(theta + Data$SS, knots=Data$knots,
-                             degree=Data$degree)
-      BSP  <- matrix(rep(thetaSS, times=Data$v),
-                     ncol=Data$degree + length(Data$knots),
-                     nrow=Data$n * Data$v, byrow=T)
-      W       <- rowSums( kLL *BSP )
-    } else if(basis=="nn"){
-      ### Neural Network
-      inLL  <- matrix(rep(kappa[1:(Data$K/2)],each=Data$n),ncol=Data$M)
-      pol   <- matrix(rep(theta, times=Data$v), ncol=Data$M,
-                      nrow=Data$n * Data$v)
-      otLL  <- matrix(rep(kappa[((Data$K/2)+1):Data$K],each=Data$n),ncol=Data$M)
-      W       <- rowSums( plogis(inLL * pol) * otLL )
-
-    }else stop("Unknow basis type :/")
+    W       <- LLfn(theta, kappa, Data$knots, Data$degree,
+                    Data$n, Data$v, Data$SS, Data$K, Data$M)
     IRF     <- 1 / ( 1 + exp(-W) )
     LL      <- sum( dbinom(Data$X[,3], size=max(Data$X[,3]), prob=IRF, log=T) )
 

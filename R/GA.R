@@ -13,6 +13,6 @@ GA <- function(Model, Data, maxit) {
                   lower=rep(-5,length(Data$parm.names)),
                   upper=rep(5,length(Data$parm.names)),
                   names=Data$parm.names, monitor=T,
-                  maxiter=maxit)
+                  maxiter=maxit, suggestions=Data$PGF(Data))
   return(Model(estimates@solution, Data))
 }

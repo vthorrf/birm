@@ -1,5 +1,5 @@
 rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
-                  Thin=1, A=500, temp=1e-2, tmax=1, algo="SANN", seed=666){
+                  Thin=1, A=500, temp=1e-2, tmax=1, algo="GA", seed=666){
 
   ### Start====
   #require(LaplacesDemon)
@@ -42,7 +42,7 @@ rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
 
       ### Log-Priors
       theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
-      b.prior     <- sum(dnorm(b, mean=0, sd=1, log=T))
+      b.prior     <- sum(dnorm(b    , mean=0, sd=1, log=T))
       Lpp <- theta.prior + b.prior
 
       ### Log-Likelihood

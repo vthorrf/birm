@@ -6,7 +6,7 @@ An Bayesian implementation of the (Generalized) Partial Credits Model.
 }
 \usage{
 pcm(x, levels, p=1, method="VB", Iters=500, Smpl=1000,
-    Thin=1, A=500, temp=1e-2, tmax=1, algo="SANN", seed=666)
+    Thin=1, A=500, temp=1e-2, tmax=1, algo="GA", seed=666)
 }
 \arguments{
    \item{x}{A matrix in the wide format. You should certify that: the minimum possible score is 1; all variables are named; and that are only variables to be modeled.}
@@ -19,7 +19,7 @@ pcm(x, levels, p=1, method="VB", Iters=500, Smpl=1000,
    \item{A}{A is used only by the "MCMC" method. It is the number of initial, adaptive iterations to be discarded as burn-in. The value defaults to 500.}
    \item{temp}{Controls the "SANN" algorithm applied with the "MAP" method. It is the starting temperature for the cooling schedule. Defaults to 1e-2.}
    \item{tmax}{Is the number of function evaluations at each temperature for the "SANN" algorithm applied with the "MAP" method. Defaults to 1.}
-   \item{algo}{The algorithm to be used if the estimation method is "MAP". Defaults to "SANN", Simulated Annealing. The other possible value is "GA", for a real-valued based genetic algorithm.}
+   \item{algo}{The algorithm to be used if the estimation method is "MAP". Defaults to "GA", for a real-valued based genetic algorithm. The other possible value is "SANN", Simulated Annealing.}
    \item{seed}{The random seed for guaranteeing replicable results. As most examples in LaplacesDemon, it defaults to 666.}
 }
 \value{
