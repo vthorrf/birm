@@ -1,5 +1,5 @@
 optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL,
-                   degree=3, method="VB", Iters=500, Smpl=1000, Thin=1, A=500,
+                   degree=3, method="LA", Iters=100, Smpl=1000, Thin=1, a.s=0.234,
                    temp=1e-2, tmax=1, algo="GA", seed=666){
 
   ### Start====
@@ -16,7 +16,7 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   if (is.null(levels)) {
     base_scor <- rowSums(x) / (max(x) * ncol(x))
   } else base_scor <- rowSums(x) / ((levels-1) * ncol(x))
-  if (is.null(knots)) knots <- unique(sort(qtrunc(base_scor, "norm", a=-4, b=4)))
+  if (is.null(knots)) knots <- unique(sort(qtrunc(base_scor, "norm", a=-2, b=2)))
   if (is.null(err)) {
     err <- rep(1e-4,nrow(x))
   } else if(length(err) == nrow(x)) {
@@ -46,8 +46,9 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   pos.kappa  <- grep("kappa", parm.names)
   pos.theta  <- grep("theta", parm.names)
   PGF <- function(Data) {
-    kappa <- rlaplace(Data$K, 0, 1)
-    theta <- rtrunc(Data$n, "norm", -4, 4, mean=Data$SS, sd=Data$err)
+    kappa <- rnorm(Data$K, 0, 1)
+    #theta <- Data$SS
+    theta <- rtrunc(Data$n, "norm", -2, 2, mean=Data$SS, sd=Data$err)
     return(c(kappa, theta))
   }
   LLfn   <- function(theta, kappa, knots, degree, n, v, SS, K, M) {
@@ -86,25 +87,26 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
     }else stop("Unknow basis type :/")
     return(W)
   }
-  MyData <- list(parm.names=parm.names, mon.names=mon.names,
-                 PGF=PGF, X=data_long, n=nrow(x), v=ncol(x),
-                 pos.kappa=pos.kappa, pos.theta=pos.theta, K=K,
-                 SS=qtrunc(base_scor, "norm", a=-4, b=4), M=M,
-                 knots=knots, degree=degree, err=err)
+  MyData <- list( parm.names=parm.names, mon.names=mon.names,
+                  PGF=PGF, X=data_long, n=nrow(x), v=ncol(x),
+                  pos.kappa=pos.kappa, pos.theta=pos.theta, K=K,
+                  SS=((base_scor * 4) -2), M=M, knots=knots,
+                  degree=degree, err=err, ssecdf=ecdf((base_scor * 4) -2) )
   is.data(MyData)
 
   ### Model====
   Model <- function(parm, Data){
 
     ## Prior parameters
-    theta <- interval(parm[Data$pos.theta], -4, 4)
+    theta <- interval(parm[Data$pos.theta], -2, 2)
     parm[Data$pos.theta] <- theta
     kappa <- tanh(parm[Data$pos.kappa])
 
     ### Log-Priors
-    theta.prior <- sum(dtrunc(theta, "norm",    -4, 4, mean=Data$SS,
-                              sd=Data$err, log=T))
-    kappa.prior <- sum(dlaplace(atanh(kappa), 0, 1, log=T))
+    tecdf       <- ecdf(theta)
+    ss.tt.d     <- Data$ssecdf(Data$SS) - tecdf(theta)
+    theta.prior <- sum(dlaplace(ss.tt.d, location=0, scale=1e-4, log=T))
+    kappa.prior <- sum(dnorm(atanh(kappa), 0, 1, log=T))
     Lpp <- kappa.prior + theta.prior
 
     ### Log-Likelihood
@@ -142,12 +144,14 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
                                 CovEst="Identity", Stop.Tolerance=1e-5,
                                 CPUs=CPUs, Type="PSOCK")
   } else if (method=="MCMC") {
-    Iters=Iters; Status=Iters/10; Thin=Thin; Ad=A
+    ## Hit-And-Run Metropolis
+    Iters=Iters; Status=Iters/10; Thin=Thin; A=a.s
     Fit <- LaplacesDemon(Model=Model, Data=MyData,
                          Initial.Values=Initial.Values,
-                         Covar=NULL, Iterations=Iters,Status=Status,
-                         Thinning=Thin, Algorithm="NUTS",
-                         Specs=list(A=Ad,delta=0.6,epsilon=NULL,Lmax=Inf))
+                         Covar=NULL, Iterations=Iters,
+                         Status=Status, Thinning=Thin,
+                         Algorithm="HARM",
+                         Specs=list(alpha.star=A, B=NULL))
   } else if (method=="PMC") {
     Iters=Iters; Smpl=Smpl; Thin=Thin
     Fit <- PMC(Model=Model, Data=MyData, Initial.Values=Initial.Values,
@@ -201,7 +205,13 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
                     'abil'=abil, 'kappa'=kappa,'FitIndexes'=FI)
 
   } else {
-    ppkp <- Fit$Summary1[grep("kappa", rownames(Fit$Summary1), fixed=TRUE),1]
+    if (method=="PMC") {
+      ppkp <- Fit$Summary[grep("kappa", rownames(Fit$Summary), fixed=TRUE),1]
+      abil <- Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
+    } else {
+      ppkp <- Fit$Summary1[grep("kappa", rownames(Fit$Summary1), fixed=TRUE),1]
+      abil <- Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+    }
     if(basis=="legendre") {
       kappa  = matrix(ppkp,ncol=(degree+2))
       rownames(kappa) <- colnames(x)
@@ -221,14 +231,12 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
       colnames(kappain) <- paste("Kappa_IN_",1:M,sep="")
       colnames(kappaout) <- paste("Kappa_OUT_",1:M,sep="")
       kappa    <- list(kappain, kappaout)
-    }else stop("Unknow basis type :/")
-    abil <- Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+    } else stop("Unknow basis type :/")
     Dev   = Fit$Deviance
     DIC   = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                     'abil'=abil,'kappa'=kappa,'DIC'=DIC)
-
   }
   return(Results)
 }

@@ -1,5 +1,5 @@
-rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
-                  Thin=1, A=500, temp=1e-2, tmax=1, algo="GA", seed=666){
+rasch <- function(x, interaction=F, method="LA", Iters=100, Smpl=1000,
+                  Thin=1, a.s=0.234, temp=1e-2, tmax=1, algo="GA", seed=666){
 
   ### Start====
   #require(LaplacesDemon)
@@ -141,14 +141,14 @@ rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
                                 CovEst="Identity", Stop.Tolerance=1e-5,
                                 CPUs=CPUs, Type="PSOCK")
   } else if (method=="MCMC") {
-    ## No-U-Turn Sampler====
-    #Iters=20000; Status=100; Thin=10; Ad=500; delta=.6
-    Iters=Iters; Status=Iters/10; Thin=Thin; Ad=A
+    ## Hit-And-Run Metropolis====
+    Iters=Iters; Status=Iters/10; Thin=Thin; A=a.s
     Fit <- LaplacesDemon(Model=Model, Data=MyData,
                          Initial.Values=Initial.Values,
-                         Covar=NULL, Iterations=Iters,Status=Status,
-                         Thinning=Thin, Algorithm="NUTS",
-                         Specs=list(A=Ad,delta=0.6,epsilon=NULL,Lmax=Inf))
+                         Covar=NULL, Iterations=Iters,
+                         Status=Status, Thinning=Thin,
+                         Algorithm="HARM",
+                         Specs=list(alpha.star=A, B=NULL))
   } else if (method=="PMC") {
     ## Population Monte Carlo====
     #Iters=10; Thin=1; Smpl=1000
@@ -191,8 +191,13 @@ rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
                       'abil'=abil,'diff'=diff,'weight'=weight,'FitIndexes'=FI)
     }
   } else {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-    diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
+    if (method=="PMC") {
+      abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
+      diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
+    } else {
+      abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+      diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
+    }
     Dev  = Fit$Deviance
     DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 
@@ -200,7 +205,11 @@ rasch <- function(x, interaction=F, method="VB", Iters=500, Smpl=1000,
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                       'abil'=abil,'diff'=diff,'DIC'=DIC)
     } else {
-      weight = Fit$Summary1[grep("delta", rownames(Fit$Summary1), fixed=TRUE),1]
+      if (method=="PMC") {
+        weight = Fit$Summary[grep("delta", rownames(Fit$Summary), fixed=TRUE),1]
+      } else {
+        weight = Fit$Summary1[grep("delta", rownames(Fit$Summary1), fixed=TRUE),1]
+      }
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                       'abil'=abil,'diff'=diff,'weight'=weight,'DIC'=DIC)
     }

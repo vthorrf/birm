@@ -1,5 +1,6 @@
-rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500,
-                Smpl=1000, Thin=1, A=500, temp=1e-2, tmax=1, algo="GA", seed=666){
+rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
+                Smpl=1000, Thin=1, a.s=0.234, temp=1e-2, tmax=1,
+                algo="GA", seed=666){
 
   ### Start====
   #require(LaplacesDemon)
@@ -157,14 +158,14 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500,
                                 CovEst="Identity", Stop.Tolerance=1e-5,
                                 CPUs=CPUs, Type="PSOCK")
   } else if (method=="MCMC") {
-    ## No-U-Turn Sampler====
-    #Iters=10000; Status=100; Thin=10; Ad=500; delta=.6
-    Iters=Iters; Status=Iters/10; Thin=Thin; Ad=A
+    ## Hit-And-Run Metropolis====
+    Iters=Iters; Status=Iters/10; Thin=Thin; A=a.s
     Fit <- LaplacesDemon(Model=Model, Data=MyData,
                          Initial.Values=Initial.Values,
-                         Covar=NULL, Iterations=Iters,Status=Status,
-                         Thinning=Thin, Algorithm="NUTS",
-                         Specs=list(A=Ad,delta=0.6,epsilon=NULL,Lmax=Inf))
+                         Covar=NULL, Iterations=Iters,
+                         Status=Status, Thinning=Thin,
+                         Algorithm="HARM",
+                         Specs=list(alpha.star=A, B=NULL))
   } else if (method=="PMC") {
     ## Population Monte Carlo====
     #Iters=10; Thin=11; Smpl=1000
@@ -203,9 +204,16 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500,
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                       'abil'=abil,'diff'=diff,"k"=k,'FitIndexes'=FI)
     } else {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-    diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
-    k    = Fit$Summary1[grep("k", rownames(Fit$Summary1), fixed=TRUE),1]
+      if (method=="PMC") {
+        abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
+        diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
+        k    = Fit$Summary[grep("k", rownames(Fit$Summary), fixed=TRUE),1]
+
+      } else {
+        abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+        diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
+        k    = Fit$Summary1[grep("k", rownames(Fit$Summary1), fixed=TRUE),1]
+      }
     Dev  = Fit$Deviance
     DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 
@@ -223,10 +231,17 @@ rsm <- function(x, levels=NULL, p=1, method="VB", Iters=500,
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                       'abil'=abil,'diff'=diff,"k"=k,"disc"=disc,'FitIndexes'=FI)
     } else {
-    abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-    diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
-    k    = Fit$Summary1[grep("k", rownames(Fit$Summary1), fixed=TRUE),1]
-    disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
+      if (method=="PMC") {
+        abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
+        diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
+        k    = Fit$Summary[grep("k", rownames(Fit$Summary), fixed=TRUE),1]
+        disc = Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1]
+      } else {
+        abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+        diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
+        k    = Fit$Summary1[grep("k", rownames(Fit$Summary1), fixed=TRUE),1]
+        disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
+      }
     Dev  = Fit$Deviance
     DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
 
