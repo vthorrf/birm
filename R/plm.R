@@ -331,8 +331,14 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
       disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
     }
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+    Dev    <- Fit$Deviance
+    mDD    <- Dev - min(Dev)
+    pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+    pV     <- var(pDD)/2
+    Dbar   <- mean(pDD)
+    #Dbar = mean(Dev)
+    #pV <- var(Dev)/2
+    DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,'DIC'=DIC)
@@ -357,8 +363,14 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
       disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
     }
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+    Dev    <- Fit$Deviance
+    mDD    <- Dev - min(Dev)
+    pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+    pV     <- var(pDD)/2
+    Dbar   <- mean(pDD)
+    #Dbar = mean(Dev)
+    #pV <- var(Dev)/2
+    DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,'DIC'=DIC)
@@ -386,8 +398,14 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
       gues = Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1]
     }
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+    Dev    <- Fit$Deviance
+    mDD    <- Dev - min(Dev)
+    pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+    pV     <- var(pDD)/2
+    Dbar   <- mean(pDD)
+    #Dbar = mean(Dev)
+    #pV <- var(Dev)/2
+    DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,'DIC'=DIC)
@@ -419,8 +437,14 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       gues = Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1]
       UpAs = Fit$Summary1[grep("UA", rownames(Fit$Summary1), fixed=TRUE),1]
     }
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+    Dev    <- Fit$Deviance
+    mDD    <- Dev - min(Dev)
+    pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+    pV     <- var(pDD)/2
+    Dbar   <- mean(pDD)
+    #Dbar = mean(Dev)
+    #pV <- var(Dev)/2
+    DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,

@@ -1,7 +1,7 @@
 Package: birm
 Type: Package
 Title: Fitting Bayesian Item Response Models
-Version: 0.2.0
+Version: 0.2.1
 Year: 2020, July
 Author: Vithor Rosa Franco <vithorfranco@gmail.com>
 Maintainer: Vithor Rosa Franco <vithorfranco@gmail.com>

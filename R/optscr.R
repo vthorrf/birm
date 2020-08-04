@@ -232,8 +232,14 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
       colnames(kappaout) <- paste("Kappa_OUT_",1:M,sep="")
       kappa    <- list(kappain, kappaout)
     } else stop("Unknow basis type :/")
-    Dev   = Fit$Deviance
-    DIC   = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+    Dev    <- Fit$Deviance
+    mDD    <- Dev - min(Dev)
+    pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+    pV     <- var(pDD)/2
+    Dbar   <- mean(pDD)
+    #Dbar = mean(Dev)
+    #pV <- var(Dev)/2
+    DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                     'abil'=abil,'kappa'=kappa,'DIC'=DIC)

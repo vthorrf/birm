@@ -207,8 +207,14 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       }
       rownames(diff) = colnames(x)
       colnames(diff) = paste("Answer_Key",1:levels,sep="_")
-      Dev  = Fit$Deviance
-      DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+      Dev    <- Fit$Deviance
+      mDD    <- Dev - min(Dev)
+      pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+      pV     <- var(pDD)/2
+      Dbar   <- mean(pDD)
+      #Dbar = mean(Dev)
+      #pV <- var(Dev)/2
+      DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                       'abil'=abil,'diff'=diff,'DIC'=DIC)
@@ -240,8 +246,14 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       }
       rownames(diff) = colnames(x)
       colnames(diff) = paste("Answer_Key",1:levels,sep="_")
-      Dev  = Fit$Deviance
-      DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+      Dev    <- Fit$Deviance
+      mDD    <- Dev - min(Dev)
+      pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+      pV     <- var(pDD)/2
+      Dbar   <- mean(pDD)
+      #Dbar = mean(Dev)
+      #pV <- var(Dev)/2
+      DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                       'abil'=abil,'diff'=diff,"disc"=disc,'DIC'=DIC)

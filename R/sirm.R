@@ -127,8 +127,14 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
       abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
       diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
     }
-    Dev  = Fit$Deviance
-    DIC  = list(DIC=mean(Dev) + var(Dev)/2, Dbar=mean(Dev), pV=var(Dev)/2)
+    Dev    <- Fit$Deviance
+    mDD    <- Dev - min(Dev)
+    pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+    pV     <- var(pDD)/2
+    Dbar   <- mean(pDD)
+    #Dbar = mean(Dev)
+    #pV <- var(Dev)/2
+    DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                     'abil'=abil,'diff'=diff,'DIC'=DIC)
