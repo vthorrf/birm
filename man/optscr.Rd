@@ -7,7 +7,7 @@ An Bayesian implementation of the Optimal Scoring prodecure.
 \usage{
 optscr(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL,
        degree=3, method="LA", Iters=100, Smpl=1000, Thin=1, a.s=0.234,
-       temp=1e-2, tmax=1, algo="GA", seed=666)
+       B=TRUE, temp=1e-2, tmax=1, algo="GA", seed=666)
 }
 \arguments{
    \item{x}{A matrix in the wide format. You should certify that: the minimum possible score is 0; all variables are named; and that are only variables to be modeled.}
@@ -22,6 +22,7 @@ optscr(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL,
    \item{Smpl}{This argument indicates the number of posterior samples to be taken with sampling importance resampling for the estimation methods "IQ","LA", and "VB". For the "PMC" method, this is the number of samples per mixture component. This argument is not used by both the "MCMC" and the "MAP" methods. The default value, 1000, is already fit for all the estimation methods that use this argument.}
    \item{Thin}{This is the number by which the posterior is thinned. Only "MCMC" and "PMC" estimation methods use this argument.}
    \item{a.s}{This is the alpha.star parameter, representing the target acceptance rate of the "MCMC" method. The value defaults to 0.234.}
+   \item{B}{A logical parameter representing if blockwise sampling (i.e., true scores first, then item parameters) should be used instead of multivariate sampling when using the "MCMC" method. The value defaults to TRUE.}
    \item{temp}{Controls the "SANN" algorithm applied with the "MAP" method. It is the starting temperature for the cooling schedule. Defaults to 1e-2.}
    \item{tmax}{Is the number of function evaluations at each temperature for the "SANN" algorithm applied with the "MAP" method. Defaults to 1.}
    \item{algo}{The algorithm to be used if the estimation method is "MAP". Defaults to "GA", for a real-valued based genetic algorithm. The other possible value is "SANN", Simulated Annealing.}

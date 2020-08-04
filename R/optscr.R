@@ -1,6 +1,6 @@
 optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL,
                    degree=3, method="LA", Iters=100, Smpl=1000, Thin=1, a.s=0.234,
-                   temp=1e-2, tmax=1, algo="GA", seed=666){
+                   B=TRUE, temp=1e-2, tmax=1, algo="GA", seed=666){
 
   ### Start====
   #require(LaplacesDemon)
@@ -146,12 +146,18 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   } else if (method=="MCMC") {
     ## Hit-And-Run Metropolis
     Iters=Iters; Status=Iters/10; Thin=Thin; A=a.s
+    if (B == T) {
+      B=list(grep("theta",parm.names),
+             seq_len(length(parm.names))[-grep("theta",parm.names)])
+    } else if (B == F) {
+      B = NULL
+    } else { stop(paste("Don't know what you mean with B = ", B, sep="")) }
     Fit <- LaplacesDemon(Model=Model, Data=MyData,
                          Initial.Values=Initial.Values,
                          Covar=NULL, Iterations=Iters,
                          Status=Status, Thinning=Thin,
                          Algorithm="HARM",
-                         Specs=list(alpha.star=A, B=NULL))
+                         Specs=list(alpha.star=A, B=B))
   } else if (method=="PMC") {
     Iters=Iters; Smpl=Smpl; Thin=Thin
     Fit <- PMC(Model=Model, Data=MyData, Initial.Values=Initial.Values,
