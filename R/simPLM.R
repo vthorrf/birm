@@ -1,6 +1,7 @@
 simPLM <- function(n, v, l=NULL, p=1, scaling=1.7, seed=666,
                    sequence=F, dist="norm"){
 
+  ## Simulate theta and diff parameters
   alpha=c(5,5); beta=c(5,5)
   set.seed(seed)
   if (is.null(l)) l <- 2
@@ -20,21 +21,22 @@ simPLM <- function(n, v, l=NULL, p=1, scaling=1.7, seed=666,
     } else stop("Unknow distribution for parameters :(")
   } else stop("The argument 'sequence' has some problem, mate")
 
+  ## Simulate PL parameters
   if (p == 1) {
     eta <- outer(sigma, theta, function(r,c) plogis(scaling * (r - c)) )
   } else if (p == 2) {
-    disc <- rnorm(v, 0, 1)
+    disc <- rlnorm(v, 0, 1)
     E <- outer(sigma, theta, function(r,c) r - c )
     eta <- sapply(1:ncol(E), function(x) plogis(disc[x] * E[,x]))
   } else if (p == 3) {
-    disc <- rnorm(v, 0, 1)
+    disc <- rlnorm(v, 0, 1)
     ch   <- rbeta(v, 1, 1)
     E <- outer(sigma, theta, function(r,c) r - c )
     eta <- sapply(1:ncol(E), function(x) plogis(
       ch[x] + ( (1 - ch[x]) / (1 + exp(-disc[x] * ( E[,x] ))) )
     ) )
   } else if (p == 4) {
-    disc <- rnorm(v, 0, 1)
+    disc <- rlnorm(v, 0, 1)
     ch   <- rbeta(v, 1, 1)
     UA   <- runif(v, .5, 1)
     E <- outer(sigma, theta, function(r,c) r - c )
@@ -43,6 +45,7 @@ simPLM <- function(n, v, l=NULL, p=1, scaling=1.7, seed=666,
     ) )
   } else stop("Unknow model :(")
 
+  ## Create dataset
   PLM <- eta
   for (i in 1:nrow(PLM)) {
     for (j in 1:ncol(PLM)) {
@@ -53,6 +56,7 @@ simPLM <- function(n, v, l=NULL, p=1, scaling=1.7, seed=666,
   colnames(PLM) <- sapply(1:ncol(PLM), function(x) paste("Item_",x,sep=""))
   rownames(PLM) <- sapply(1:nrow(PLM), function(x) paste("Ind_",x,sep=""))
 
+  ## Return results
   if (p == 1) {
     Result <- list("data"=PLM,"abil"=sigma,"diff"=theta, "scaling"=scaling)
   } else if (p == 2) {
