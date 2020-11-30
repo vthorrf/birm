@@ -23,7 +23,7 @@ simPLM <- function(n, v, l=NULL, p=1, scaling=1.7, seed=666,
   if (p == 1) {
     eta <- outer(sigma, theta, function(r,c) plogis(scaling * (r - c)) )
   } else if (p == 2) {
-    disc <- rnorm(n, 0, 1)
+    disc <- rnorm(v, 0, 1)
     E <- outer(sigma, theta, function(r,c) r - c )
     eta <- sapply(1:ncol(E), function(x) plogis(disc[x] * E[,x]))
   } else if (p == 3) {
