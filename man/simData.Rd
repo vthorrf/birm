@@ -12,7 +12,7 @@ simData(n=NULL, v=NULL ,l=NULL, p=1, scaling=1.7, seed=666, sequence=F,
    \item{n}{Sample size.}
    \item{v}{The number of variables.}
    \item{l}{The number of response keys.}
-   \item{p}{Indicates which parameter-logistic model will be fitted if the argument model is equal to "plm". When p = 1, the function returns the One-Parameter Logistic Model (1PLM). When p = 2, the function returns the 2PLM. p = 3 returns the 3PLM and p = 4 returns the 4PLM.}
+   \item{p}{Indicates which parameter-logistic model will be fitted if the argument model is equal to "plm". When p = 1, the function returns the One-Parameter Logistic Model (1PLM). When p = 2, the function returns the 2PLM. p = 3 returns the 3PLM, p = 4 returns the 4PLM, and p = 5 returns the 5PLM.}
    \item{scaling}{The scaling parameter for when simulating the one-parameter logistic model (p = 1 and model="plm").}
    \item{seed}{The random seed for guaranteeing replicable results. As most examples in LaplacesDemon, it defaults to 666.}
    \item{sequence}{If the true scores and true difficulties should be a sequence (sequence = T) or if they should be random values (sequence = F) according to the base distribution (the value of the "dist" argument).}

@@ -1,7 +1,7 @@
 birm: Bayesian Item Response Models
 =============
 
-This package is intended to be an "easy to use" tool for Bayesian Item Response Modeling. Currently, specific unidimensional IRMs are implemented, but future versions will aim on adding more flexibility to the users.
+This package is intended to be an "play-and-plug" tool for Bayesian Item Response Modeling. Currently, specific unidimensional IRMs are implemented, but future versions will aim on adding more flexibility to the intermediary and advanced users.
 
 birm depends on LaplacesDemon, an open-source statistical package that is intended to provide a complete environment for Bayesian inference.
 
@@ -10,7 +10,7 @@ This package should be considered experimental. The following models are impleme
 * Rasch model (`rasch` function)
 * Partial and Generalized Partial Credit models (`pcm` function)
 * Rating and Generalized Rating Scale models (`rsm` function)
-* 1, 2, 3 and 4-Parameter Logistic models (`plm` function)
+* 1, 2, 3, 4, and 5-Parameter Logistic models (`plm` function)
 * Strict Item Response model (`sirm` function)
 * Bayesian Optimal Scoring (`optscr` function)
 

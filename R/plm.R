@@ -29,7 +29,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
-      Ds    <- rnorm(1)
+      Ds    <- rlnorm(1)
       return(c(theta, b, Ds))
     }
     MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -43,12 +43,13 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       ## Prior parameters
       theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
-      Ds    <- parm[Data$pos.Ds]
+      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      parm[Data$pos.Ds] <- Ds
 
       ### Log-Priors
       theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
       b.prior     <- sum(dnorm(b, mean=0, sd=1, log=T))
-      Ds.prior    <- sum(dnorm(Ds, mean=0, sd=1, log=T))
+      Ds.prior    <- sum(dlnorm(Ds, 0, 1, log=T))
       Lpp <- theta.prior + b.prior + Ds.prior
 
       ### Log-Likelihood
@@ -83,7 +84,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
-      Ds    <- rnorm(Data$v)
+      Ds    <- rlnorm(Data$v)
       return(c(theta, b, Ds))
     }
     MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -97,12 +98,13 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       ## Prior parameters
       theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
-      Ds    <- parm[Data$pos.Ds]
+      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      parm[Data$pos.Ds] <- Ds
 
       ### Log-Priors
       theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
       b.prior     <- sum(dnorm(b, mean=0, sd=1, log=T))
-      Ds.prior    <- sum(dnorm(Ds, mean=0, sd=1, log=T))
+      Ds.prior    <- sum(dlnorm(Ds, 0, 1, log=T))
       Lpp <- theta.prior + b.prior + Ds.prior
 
       ### Log-Likelihood
@@ -138,7 +140,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
-      Ds    <- rnorm(Data$v)
+      Ds    <- rlnorm(Data$v)
       c     <- rbeta(Data$v, 1, 1)
       return(c(theta, b, Ds, c))
     }
@@ -153,14 +155,15 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       ## Prior parameters
       theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
-      Ds    <- parm[Data$pos.Ds]
+      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      parm[Data$pos.Ds] <- Ds
       c     <- interval( parm[Data$pos.c], 1e-100, (1 - 1e-100) )
       parm[Data$pos.c] <- c
 
       ### Log-Priors
       theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
       b.prior     <- sum(dnorm(b, mean=0, sd=1, log=T))
-      Ds.prior    <- sum(dnorm(Ds, mean=0, sd=1, log=T))
+      Ds.prior    <- sum(dlnorm(Ds, 0, 1, log=T))
       c.prior     <- sum(dbeta(c, 1, 1, log=T))
       Lpp <- theta.prior + b.prior + Ds.prior + c.prior
 
@@ -200,7 +203,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
-      Ds    <- rnorm(Data$v)
+      Ds    <- rlnorm(Data$v)
       c     <- rbeta(Data$v, 1, 1)
       UA    <- rbeta(Data$v, 1, 1)
       return(c(theta, b, Ds, c, UA))
@@ -217,7 +220,8 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       ## Prior parameters
       theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
-      Ds    <- parm[Data$pos.Ds]
+      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      parm[Data$pos.Ds] <- Ds
       c     <- interval( parm[Data$pos.c], 1e-100, (1 - 1e-100) )
       parm[Data$pos.c] <- c
       UA    <- interval( parm[Data$pos.UA], 1e-100, (1 - 1e-100) )
@@ -226,7 +230,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       ### Log-Priors
       theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
       b.prior     <- sum(dnorm(b, mean=0, sd=1, log=T))
-      Ds.prior    <- sum(dnorm(Ds, mean=0, sd=1, log=T))
+      Ds.prior    <- sum(dlnorm(Ds, 0, 1, log=T))
       c.prior     <- sum(dbeta(c, 1, 1, log=T))
       UA.prior     <- sum(dbeta(UA, 1, 1, log=T))
       Lpp <- theta.prior + b.prior + Ds.prior + c.prior + UA.prior
@@ -238,6 +242,81 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       cLL     <- rep(c    , each=Data$n)
       UALL     <- rep(UA   , each=Data$n)
       IRF     <- cLL + ( (UALL - cLL) / (1 + exp(-DLL * ( thetaLL - bLL ))) )
+      LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
+
+      ### Log-Posterior
+      LP <- LL + Lpp
+      ### Estimates
+      yhat <- qbinom(rep(.5, length(IRF)), size=1, prob=IRF)
+      ### Output
+      Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
+      return(Modelout)
+    }
+    Model <- compiler::cmpfun(Model)
+    Initial.Values <- GIV(Model, MyData, PGF=T)
+    is.model(Model, Initial.Values, MyData)
+    is.bayesian(Model, Initial.Values, MyData)
+
+  } else  if (p == 5) {
+    ## Five-parameter logistic====
+    # Assemble data list
+    mon.names  <- "LP"
+    parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x)),
+                                      Ds=rep(0,ncol(x)), c=rep(0,ncol(x)),
+                                      UA=rep(0,ncol(x)), AS=rep(0,ncol(x)) ))
+    pos.theta  <- grep("theta", parm.names)
+    pos.b      <- grep("b", parm.names)
+    pos.Ds     <- grep("Ds", parm.names)
+    pos.c      <- grep("c", parm.names)
+    pos.UA     <- grep("UA", parm.names)
+    pos.AS     <- grep("AS", parm.names)
+    PGF <- function(Data) {
+      theta <- rnorm(Data$n)
+      b     <- rnorm(Data$v)
+      Ds    <- rlnorm(Data$v)
+      c     <- rbeta(Data$v, 1, 1)
+      UA    <- rbeta(Data$v, 1, 1)
+      AS    <- rlnorm(Data$v)
+      return(c(theta, b, Ds, c, UA, AS))
+    }
+    MyData <- list(parm.names=parm.names, mon.names=mon.names,
+                   PGF=PGF, X=data_long, n=nrow(x), v=ncol(x),
+                   pos.theta=pos.theta, pos.b=pos.b, pos.c=pos.c,
+                   pos.UA=pos.UA, pos.Ds=pos.Ds, pos.ASs=pos.AS)
+    is.data(MyData)
+
+    # Model
+    Model <- function(parm, Data){
+
+      ## Prior parameters
+      theta <- parm[Data$pos.theta]
+      b     <- parm[Data$pos.b]
+      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      parm[Data$pos.Ds] <- Ds
+      c     <- interval( parm[Data$pos.c], 1e-100, (1 - 1e-100) )
+      parm[Data$pos.c] <- c
+      UA    <- interval( parm[Data$pos.UA], 1e-100, (1 - 1e-100) )
+      parm[Data$pos.UA] <- UA
+      AS    <- interval( parm[Data$pos.AS], 1e-100, Inf )
+      parm[Data$pos.AS] <- AS
+
+      ### Log-Priors
+      theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
+      b.prior     <- sum(dnorm(b, mean=0, sd=1, log=T))
+      Ds.prior    <- sum(dlnorm(Ds, 0, 1, log=T))
+      c.prior     <- sum(dbeta(c, 1, 1, log=T))
+      UA.prior    <- sum(dbeta(UA, 1, 1, log=T))
+      AS.prior    <- sum(dlnorm(AS, 0, 1, log=T))
+      Lpp <- theta.prior + b.prior + Ds.prior + c.prior + UA.prior + AS.prior
+
+      ### Log-Likelihood
+      thetaLL <- rep(theta, times=Data$v)
+      bLL     <- rep(b    , each=Data$n)
+      DLL     <- rep(Ds   , each=Data$n)
+      cLL     <- rep(c    , each=Data$n)
+      UALL    <- rep(UA   , each=Data$n)
+      SLL     <- rep(AS   , each=Data$n)
+      IRF     <- cLL + ( (UALL - cLL) / ((1 + exp(-DLL * ( thetaLL - bLL )))^SLL) )
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -449,6 +528,49 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                     'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,
                     "UpAs"=UpAs,'DIC'=DIC)
+    }
+  } else if (p == 5) {
+    if (method=="MAP") {
+      abil = Fit$parm[pos.theta]
+      diff = Fit$parm[pos.b]
+      disc = Fit$parm[pos.Ds]
+      gues = Fit$parm[pos.c]
+      UpAs = Fit$parm[pos.UA]
+      asym = Fit$parm[pos.AS]
+      FI   = Fit$FI
+
+      Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
+                      'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,
+                      "UpAs"=UpAs,"asym"=asym,'FitIndexes'=FI)
+    } else {
+      ## Four-parameter logistic====
+      if (method=="PMC") {
+        abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
+        diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
+        disc = Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1]
+        gues = Fit$Summary[grep("c", rownames(Fit$Summary), fixed=TRUE),1]
+        UpAs = Fit$Summary[grep("UA", rownames(Fit$Summary), fixed=TRUE),1]
+        asym = Fit$Summary[grep("AS", rownames(Fit$Summary), fixed=TRUE),1]
+      } else {
+        abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
+        diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
+        disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
+        gues = Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1]
+        UpAs = Fit$Summary1[grep("UA", rownames(Fit$Summary1), fixed=TRUE),1]
+        asym = Fit$Summary1[grep("AS", rownames(Fit$Summary1), fixed=TRUE),1]
+      }
+      Dev    <- Fit$Deviance
+      mDD    <- Dev - min(Dev)
+      pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
+      pV     <- var(pDD)/2
+      Dbar   <- mean(pDD)
+      #Dbar = mean(Dev)
+      #pV <- var(Dev)/2
+      DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
+
+      Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
+                      'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,
+                      "UpAs"=UpAs,"asym"=asym,'DIC'=DIC)
     }
   } else warning("Can't return any result :P")
 

@@ -1,0 +1,17 @@
+.GlobalEnv
+package:lavaan
+package:birm
+package:matrixStats
+package:tidyr
+package:parallel
+package:compiler
+package:LaplacesDemon
+tools:rstudio
+package:stats
+package:graphics
+package:grDevices
+package:utils
+package:datasets
+package:methods
+Autoloads
+package:base
