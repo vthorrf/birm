@@ -1,5 +1,5 @@
 pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
-                a.s=0.234, temp=1e-2, tmax=1, algo="GA", seed=666){
+                a.s=0.234, temp=1e-2, tmax=1, algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
   #require(LaplacesDemon)
@@ -180,7 +180,7 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
     #Iters=100; Smpl=1000
     Iters=Iters; Status=Iters/10
     Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData, algo=algo,
-               maxit=Iters, temp=temp, tmax=tmax, REPORT=Status)
+               maxit=Iters, temp=temp, tmax=tmax, REPORT=Status, Interval=Interval)
   } else {stop('Unknown optimization method.')}
 
   ### Results====

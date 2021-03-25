@@ -1,4 +1,4 @@
-GA <- function(Model, Data, maxit) {
+GA <- function(Model, parm, Data, maxit) {
   print("Initiating MAP estimation with GA algorithm")
   #want = c("GA")
   #have = want %in% rownames(installed.packages())
@@ -13,6 +13,6 @@ GA <- function(Model, Data, maxit) {
                   lower=rep(-5,length(Data$parm.names)),
                   upper=rep(5,length(Data$parm.names)),
                   names=Data$parm.names, monitor=T,
-                  maxiter=maxit, suggestions=Data$PGF(Data))
+                  maxiter=maxit, suggestions=parm)
   return(Model(estimates@solution, Data))
 }

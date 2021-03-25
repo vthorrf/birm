@@ -21,7 +21,7 @@ All of the following estimation methods implemented in LaplacesDemon are availab
 * Hit-And-Run Metropolis (`method = "MCMC"` argument)
 * Population Monte Carlo (`method = "PMC"` argument)
 * Iterative Quadrature (`method = "IQ"` argument)
-* Maximum a Posteriori estimation with Simulated Annealing or Genetic Algorithm (`method = "MAP"` and `algo="SANN"` or `algo="GA"`; not originally implemented in LaplacesDemon)
+* Maximum a Posteriori estimation with Simulated Annealing, Genetic Algorithm, or Steepest Gradient Descent (`method = "MAP"` and `algo="SANN"`, `algo="GA"`, or `algo="SD"`; not originally implemented in LaplacesDemon)
 
 # Installation #
 
