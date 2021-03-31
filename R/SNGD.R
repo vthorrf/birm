@@ -13,6 +13,7 @@ steep <- function(Model, par, Data, est, df) {
   -Model(est + {par[1]*df*{(abs(df) >  sd(df)) * 1}} +
                {par[2]*df*{(abs(df) <= sd(df)) * 1}}, Data)[["LP"]]
 }
+#require(ucminf)
 
 ### Steepest N-group Gradient Descent MAP====
 SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100) {
@@ -29,9 +30,9 @@ SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100) {
 
   # First step
   df[1,]   <- grad(Model, startvalue, Data, Interval=Interval)
-  step[1,] <- suppressWarnings(unlist(optim(c(0,0), steep, Model=Model,
-                                            Data=Data, df=df[1,], est=startvalue,
-                                            method="Nelder-Mead")$par))
+  step[1,] <- suppressWarnings(unlist(ucminf(c(0,0), steep, Model=Model,
+                                             Data=Data, df=df[1,],
+                                             est=startvalue)$par))
   par[1,]   <- startvalue +
                {step[1,1]*df[1,]*{(abs(df[1,]) >  sd(df[1,])) * 1}} +
                {step[1,2]*df[1,]*{(abs(df[1,]) <= sd(df[1,])) * 1}}
@@ -43,9 +44,9 @@ SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100) {
     # Calculate gradient and estimate step parameter
     df[run,] <- grad(Model, par[run-1,], Data, Interval=Interval)
     #print(run)
-    step[run,] <- unlist(optim(step[run-1,], steep, Model=Model,
-                               Data=Data, df=df[run,], est=par[run-1,],
-                               method="Nelder-Mead")$par)
+    step[run,] <- unlist(ucminf(step[run-1,], steep, Model=Model,
+                                Data=Data, df=df[run,],
+                                est=par[run-1,])$par)
     par[run,] <- par[run-1,] +
       {step[run,1]*df[run,]*{(abs(df[run,]) >  sd(df[run,])) * 1}} +
       {step[run,2]*df[run,]*{(abs(df[run,]) <= sd(df[run,])) * 1}}
