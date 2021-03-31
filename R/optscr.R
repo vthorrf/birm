@@ -28,7 +28,7 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
     mon.names  <- "LL"
   } else { mon.names  <- "LP" }
   if(basis=="legendre") {
-    parm.names <- as.parm.names(list( kappa=rep(0,(degree+2) * ncol(x)),
+    parm.names <- as.parm.names(list( kappa=rep(0,(degree) * ncol(x)),
                                       theta=rep(0, nrow(x)) ))
   } else if(basis=="rademacher") {
     parm.names <- as.parm.names(list( kappa=rep(0,length(knots)*ncol(x)),
@@ -51,39 +51,42 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
     theta <- rtrunc(Data$n, "norm", -2, 2, mean=Data$SS, sd=Data$err)
     return(c(kappa, theta))
   }
+  relu   <- function(x) x * (x > 0)
   LLfn   <- function(theta, kappa, knots, degree, n, v, SS, K, M) {
     if(basis=="legendre") {
       ### Legendre Orthogonal Polynomials basis expansion
-      kLL   <- matrix(rep(kappa,each=n),ncol=degree+2)
-      pol   <- matrix(rep(poly(theta, degree=degree), times=v),
-                      ncol=degree, nrow=n * v)
-      poll  <- cbind(1,theta,pol)
-      W       <- rowSums( kLL * poll )
+      kLL   <- matrix(rep(kappa,each=n),ncol=degree)
+      #poll <- do.call("rbind", lapply(seq_len(v), function(g) {
+      #  poly(theta, degree=degree)
+      #}))
+      poll  <- apply(poly(theta, degree=degree), 2, rep, times=v)
+      W     <- rowSums( kLL * poll )
     } else if(basis=="rademacher") {
       ### Rademacher basis expansion
       kLL   <- matrix(rep(kappa,each=n),ncol=length(knots))
-      thetaSS <- rep(theta, times=v)
-      thetaLL <- matrix(rep(thetaSS, times=length(knots)),
+      thetaLL <- matrix(rep(rep(theta, times=v),
+                            times=length(knots)),
                         ncol=length(knots))
-      RadBas  <- sign(sweep(thetaLL,2,knots)) * kLL
+      RadBas  <- sign(sweep(thetaLL,2,knots,"-")) * kLL
       W       <- rowSums(RadBas)
     } else if(basis=="bs") {
       ### B-spline basis expansion
-      kLL   <- matrix(rep(kappa,each=n),ncol=(length(knots)+
-                                                     degree))
-      thetaSS <- splines::bs(theta + SS, knots=knots,
-                             degree=degree)
-      BSP  <- matrix(rep(thetaSS, times=v),
-                     ncol=degree + length(knots),
-                     nrow=n * v, byrow=T)
-      W       <- rowSums( kLL *BSP )
+      kLL   <- matrix(rep(kappa,each=n),
+                      ncol=(length(knots)+degree))
+      #BSP  <- do.call("rbind", lapply(seq_len(v), function(g) {
+      #  splines::bs(theta, knots=knots, degree=degree,
+      #              Boundary.knots=c(min(theta), max(theta)))
+      #}))
+      BSP  <- apply(splines::bs(theta, knots=knots, degree=degree,
+                    Boundary.knots=c(min(theta), max(theta))), 2, rep, times=v)
+      W       <- rowSums( kLL * BSP )
     } else if(basis=="nn"){
       ### Neural Network
       inLL  <- matrix(rep(kappa[1:(K/2)],each=n),ncol=M)
       pol   <- matrix(rep(theta, times=v), ncol=M,
                       nrow=n * v)
       otLL  <- matrix(rep(kappa[((K/2)+1):K],each=n),ncol=M)
-      W       <- rowSums( plogis(inLL * pol) * otLL )
+      W     <- rowSums( relu(inLL * pol) * otLL )
     }else stop("Unknow basis type :/")
     return(W)
   }
@@ -185,9 +188,9 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   if (method=="MAP") {
     ppkp <- Fit$parm[pos.kappa]
     if(basis=="legendre") {
-      kappa  = matrix(ppkp,ncol=(degree+2))
+      kappa  = matrix(ppkp,ncol=(degree))
       rownames(kappa) <- colnames(x)
-      colnames(kappa) <- paste("Kappa_",1:(degree+2),sep="")
+      colnames(kappa) <- paste("Kappa_",1:(degree),sep="")
     } else if(basis=="rademacher") {
       kappa  = matrix(ppkp,ncol=length(knots))
       rownames(kappa) <- colnames(x)

@@ -33,8 +33,8 @@ SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100) {
                                             Data=Data, df=df[1,], est=startvalue,
                                             method="Nelder-Mead")$par))
   par[1,]   <- startvalue +
-    {step[1,1]*df[1,]*{(abs(df[1,]) >  sd(df[1,])) * 1}} +
-    {step[1,2]*df[1,]*{(abs(df[1,]) <= sd(df[1,])) * 1}}
+               {step[1,1]*df[1,]*{(abs(df[1,]) >  sd(df[1,])) * 1}} +
+               {step[1,2]*df[1,]*{(abs(df[1,]) <= sd(df[1,])) * 1}}
   f[1]      <- Model(par[1,], Data)[["LP"]]
   setTxtProgressBar(pb, 1)
 
@@ -42,19 +42,21 @@ SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100) {
   for(run in 2:maxit) {
     # Calculate gradient and estimate step parameter
     df[run,] <- grad(Model, par[run-1,], Data, Interval=Interval)
-    step[run,] <- suppressWarnings(unlist(optim(step[run-1,], steep, Model=Model,
-                                                Data=Data, df=df[run,], est=par[run-1,],
-                                                method="Nelder-Mead")$par))
-    # Calculate the new parameters' and LogPosterior values
+    #print(run)
+    step[run,] <- unlist(optim(step[run-1,], steep, Model=Model,
+                               Data=Data, df=df[run,], est=par[run-1,],
+                               method="Nelder-Mead")$par)
     par[run,] <- par[run-1,] +
       {step[run,1]*df[run,]*{(abs(df[run,]) >  sd(df[run,])) * 1}} +
       {step[run,2]*df[run,]*{(abs(df[run,]) <= sd(df[run,])) * 1}}
     f[run]    <- Model(par[run,], Data)[["LP"]]
+    f
     # Update progress bar
     setTxtProgressBar(pb, run)
   }
   close(pb)
   cat("\n")
+  #plot.ts(f)
 
   # Final messages
   stopTime = proc.time()
