@@ -16,9 +16,9 @@ steep <- function(Model, par, Data, est, df) {
 #require(ucminf)
 
 ### Steepest N-group Gradient Descent MAP====
-SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100) {
+SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100, tol=1e-3) {
   # Opening message
-  cat("Steepest N-group Gradient Descent Maximum a Posteriori estimation will run for ",
+  cat("Steepest 2-group Gradient Descent Maximum a Posteriori estimation will run for ",
       maxit, " iterations.\n\n", sep="")
   startTime = proc.time()
 
@@ -30,9 +30,14 @@ SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100) {
 
   # First step
   df[1,]   <- grad(Model, startvalue, Data, Interval=Interval)
-  step[1,] <- suppressWarnings(unlist(ucminf(c(0,0), steep, Model=Model,
-                                             Data=Data, df=df[1,],
-                                             est=startvalue)$par))
+  step[1,] <- suppressWarnings(unlist(optim(c(0,0), steep, Model=Model,
+                                            Data=Data, df=df[1,],
+                                            est=startvalue)$par))
+  if (sum(step[1,]) == 0) {
+    step[1,] <- suppressWarnings(unlist(ucminf(c(0,0), steep, Model=Model,
+                                               Data=Data, df=df[1,],
+                                               est=startvalue)$par))
+  }
   par[1,]   <- startvalue +
                {step[1,1]*df[1,]*{(abs(df[1,]) >  sd(df[1,])) * 1}} +
                {step[1,2]*df[1,]*{(abs(df[1,]) <= sd(df[1,])) * 1}}
@@ -47,24 +52,37 @@ SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100) {
     step[run,] <- unlist(ucminf(step[run-1,], steep, Model=Model,
                                 Data=Data, df=df[run,],
                                 est=par[run-1,])$par)
+    if (sum(step[run,]) == 0) {
+      step[run,] <- suppressWarnings(unlist(optim(step[run-1,], steep, Model=Model,
+                                                  Data=Data, df=df[run,],
+                                                  est=par[run-1,])$par))
+    }
     par[run,] <- par[run-1,] +
       {step[run,1]*df[run,]*{(abs(df[run,]) >  sd(df[run,])) * 1}} +
       {step[run,2]*df[run,]*{(abs(df[run,]) <= sd(df[run,])) * 1}}
     f[run]    <- Model(par[run,], Data)[["LP"]]
-    f
     # Update progress bar
-    setTxtProgressBar(pb, run)
+    if (c(df[run,] %*% df[run,]) < tol) {
+      setTxtProgressBar(pb, maxit)
+      cat("\nConvergence achieved!")
+      break
+    } else {setTxtProgressBar(pb, run)}
+  }
+  if (run < maxit) {
+    f    <- f[-c({run+1}:maxit)]
+    par  <- par[-c({run+1}:maxit),]
+    df   <- df[-c({run+1}:maxit),]
+    step <- step[-c({run+1}:maxit),]
   }
   close(pb)
   cat("\n")
-  #plot.ts(f)
 
   # Final messages
   stopTime = proc.time()
   elapsedTime = stopTime - startTime
   cat("It took ",round(elapsedTime[3],2)," secs for the run to finish. \n", sep="")
   plot.ts(f, ylab="LogPosterior", xlab="Iteration",
-          xlim=c(1,maxit), ylim=c(min(f), max(f)))
+          xlim=c(1,length(f)), ylim=c(min(f), max(f)))
 
   # Return results
   Results <- list("LogPosterior"=f, "Estimates"=par, "Gradients"=df,

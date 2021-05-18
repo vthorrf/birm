@@ -1,4 +1,4 @@
-sirm <- function(x, method="LA", Iters=100, Smpl=1000,
+ggum <- function(x, K=NULL, method="LA", Iters=100, Smpl=1000,
                  Thin=1, a.s=0.234, temp=1e-2, tmax=NULL,
                  algo="GA", seed=666, Interval=1e-8){
 
@@ -15,45 +15,72 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
   data_long <- data.frame(ID=rep(1:nrow(x), times=ncol(x)),lonlong)
 
   ### Assemble data list====
+  if(is.null(K)) K <- length(table(unlist(c(as.data.frame(x)))))
   if (method == "MAP") {
     mon.names  <- "LL"
   } else { mon.names  <- "LP" }
-  parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x)) ))
+  parm.names <- as.parm.names(list( theta=rep(0,nrow(x)),
+                                    b=rep(0,ncol(x) * {K+1}),
+                                    Ds=rep(0,ncol(x)) ))
   pos.theta  <- grep("theta", parm.names)
   pos.b      <- grep("b", parm.names)
+  pos.Ds     <- grep("Ds", parm.names)
   PGF <- function(Data) {
-    theta <- rnorm(Data$n, mean=0, sd=1)
-    b     <- rnorm(Data$v, mean=0, sd=1)
-    return(c(theta, b))
+    theta <- rnorm(Data$n)
+    b     <- rnorm(Data$v * {Data$levels+1})
+    Ds    <- rlnorm(Data$v)
+    return(c(theta, b, Ds))
   }
   MyData <- list(parm.names=parm.names, mon.names=mon.names,
-                 PGF=PGF, X=data_long, n=nrow(x), v=ncol(x),
-                 pos.theta=pos.theta, pos.b=pos.b)
+                 PGF=PGF, X=data_long, n=nrow(x), v=ncol(x), levels=K,
+                 pos.theta=pos.theta, pos.b=pos.b, pos.Ds=pos.Ds)
   is.data(MyData)
 
   ### Model====
   Model <- function(parm, Data){
 
     ## Prior parameters
-    theta <- exp(parm[Data$pos.theta])
-    b     <- exp(parm[Data$pos.b])
+    theta <- parm[Data$pos.theta]
+    b     <- parm[Data$pos.b]
+    Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+    parm[Data$pos.Ds] <- Ds
 
     ### Log-Priors
-    theta.prior <- sum(dlnorm(theta, meanlog=0, sdlog=1, log=T))
-    b.prior     <- sum(dlnorm(b    , meanlog=0, sdlog=1, log=T))
-    Lpp <- theta.prior + b.prior
+    theta.prior <- sum(dnorm(theta,    mean=0,    sd=1, log=T))
+    b.prior     <- sum(dnorm(b    ,    mean=0,    sd=1, log=T))
+    Ds.prior    <- sum(dlnorm(Ds  , meanlog=0, sdlog=1, log=T))
+    Lpp <- theta.prior + b.prior + Ds.prior
 
     ### Log-Likelihood
-    thetaLL <- rep(theta, times=Data$v)
-    bLL     <- rep(b    , each=Data$n)
-    #IRF     <- thetaLL / ( thetaLL + bLL )
-    IRF     <- 1 / ( 1 + (bLL / thetaLL) )
-    LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
+    thetaLL  <- rep(theta, times=Data$v)
+    bLL      <- matrix(rep(b    , each=Data$n),
+                       nrow=nrow(Data$X), ncol=Data$levels+1)
+    DLL      <- matrix(rep(Ds    , each=Data$n),
+                       nrow=nrow(Data$X), ncol=Data$levels)
+    # Summation of tau
+    delta    <- bLL[,1]
+    tauk     <- matrixStats::rowCumsums(bLL[,-1])
+    # Diffs
+    diff <- sweep(matrix(thetaLL, nrow=nrow(Data$X), ncol=Data$levels) -
+                  matrix(delta, nrow=nrow(Data$X), ncol=Data$levels),
+                  2, c(1:Data$levels), "*")
+    P1 <- exp(DLL * {diff - tauk})
+    # Weight diffs
+    K <- matrix(Data$levels, nrow=nrow(Data$X), ncol=Data$levels)
+    k <- matrix(rep(c(1:Data$levels), each=nrow(Data$X)),
+                nrow=nrow(Data$X), ncol=Data$levels)
+    P2  <- exp(DLL * {{{{2*K} - k - 1} * {diff}} - tauk})
+    IRF <- {P1 + P2} / matrix(rowSums(P1 + P2), nrow=nrow(Data$X), ncol=Data$levels)
+    LL  <- sum( dcat(Data$X[,3], p=IRF, log=T) )
 
     ### Log-Posterior
     LP <- LL + Lpp
     ### Estimates
-    yhat <- qbinom(rep(.5, length(IRF)), size=1, prob=IRF)
+    yhat <- tryCatch(qcat(rep(.5, nrow(IRF)), p=IRF),
+                     error=function(e) {
+                       qbinom(rep(.5, nrow(IRF)), Data$levels-1,
+                              rowMeans(IRF)) + min(Data$X[,3])
+                     })
     ### Output
     Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
     return(Modelout)
@@ -113,20 +140,33 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
   ### Results====
   if (method=="MAP") {
     abil = Fit$parm[pos.theta]
-    diff = Fit$parm[pos.b]
+    diff = Fit$parm[pos.b][c(1:MyData$v)]
+    tau = matrix(Fit$parm[pos.b][-c(1:MyData$v)], nrow=ncol(x))
+    rownames(tau) = colnames(x)
+    colnames(tau) = paste("Answer_Key",1:K,sep="_")
+    disc = Fit$parm[pos.Ds]
     FI    = Fit$FI
 
-    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                    'abil'=abil,'diff'=diff,'FitIndexes'=FI)
-
+    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,'abil'=abil,
+                    'diff'=diff,"tau"=tau,"disc"=disc,'FitIndexes'=FI)
   } else {
     if (method=="PMC") {
       abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
-      diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
+      diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1][c(1:MyData$v)]
+      tau  = matrix(Fit$Summary[grep("b", rownames(Fit$Summary),
+                                     fixed=TRUE),1][-c(1:MyData$v)],
+                    nrow=ncol(x))
+      disc = Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1]
     } else {
       abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
-      diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
+      diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1][c(1:MyData$v)]
+      tau  = matrix(Fit$Summary1[grep("b", rownames(Fit$Summary1),
+                                      fixed=TRUE),1][-c(1:MyData$v)],
+                    nrow=ncol(x))
+      disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
     }
+    rownames(tau) = colnames(x)
+    colnames(tau) = paste("Answer_Key",1:K,sep="_")
     Dev    <- Fit$Deviance
     mDD    <- Dev - min(Dev)
     pDD    <- Dev[min(which(mDD < 100)):length(Dev)]
@@ -136,9 +176,8 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
     #pV <- var(Dev)/2
     DIC  = list(DIC=Dbar + pV, Dbar=Dbar, pV=pV)
 
-    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
-                    'abil'=abil,'diff'=diff,'DIC'=DIC)
-
+    Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,'abil'=abil,
+                    'tau'=tau,'diff'=diff,"disc"=disc,'DIC'=DIC)
   }
   return(Results)
 }

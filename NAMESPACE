@@ -1,11 +1,13 @@
 #exportPattern("^[[:alpha:]]+")
+export(fishburn)
+export(ggum)
 export(optscr)
 export(pcm)
 export(plm)
 export(rasch)
 export(rsm)
-export(sirm)
 export(simData)
+export(sirm)
 importFrom("graphics", "par")
 importFrom("stats", "BIC", "cor", "dbeta", "dbinom", "dnorm", "optim",
            "plogis", "qbinom", "rbeta", "rbinom", "rnorm", "runif",

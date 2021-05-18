@@ -1,16 +1,16 @@
 Package: birm
 Type: Package
 Title: Fitting Bayesian Item Response Models
-Version: 0.2.3
-Year: 2021, March
+Version: 0.2.5
+Year: 2021, May
 Author: Vithor Rosa Franco <vithorfranco@gmail.com>
 Maintainer: Vithor Rosa Franco <vithorfranco@gmail.com>
 Description: This package have functions for fitting some traditional Item Response Models. 
              It was based on the edstan package, but instead of using Stan for Bayesian calculations, 
              it uses LaplacesDemon. Stan uses the NUTS MCMC algorithm for fitting the data. In our package, 
              the user can choose from the five estimation methods implemented on LaplacesDemon (Variational Bayes;
-             Laplace Approximation; HARM MCMC; PMC; and Iterative Quadrature), as well as from three methods of MAP
-             estimation: Simulated Annealing; Genetic Algorithm; or Steepest Gradient Descent.
+             Laplace Approximation; HARM MCMC; PMC; and Iterative Quadrature), as well as from four methods of MAP
+             estimation: Simulated Annealing; Genetic Algorithm; Steepest Gradient Descent; or ADAM.
 Depends: R (>= 4.0.0),
          LaplacesDemon (>= 16.1.4)
 Imports: compiler (>= 4.0.0),
@@ -18,7 +18,7 @@ Imports: compiler (>= 4.0.0),
          tidyr (>= 1.0.2),
          GA (>= 3.2.0),
          matrixStats (>= 0.56.0),
-	 ucminf (>= 1.1-4)
+	       ucminf (>= 1.1-4)
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

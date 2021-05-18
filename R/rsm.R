@@ -1,5 +1,5 @@
 rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
-                Smpl=1000, Thin=1, a.s=0.234, temp=1e-2, tmax=1,
+                Smpl=1000, Thin=1, a.s=0.234, temp=1e-2, tmax=NULL,
                 algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
@@ -65,7 +65,11 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
       ### Log-Posterior
       LP <- LL + Lpp
       ### Estimates
-      yhat <- qcat(rep(.5, nrow(IRF)), p=IRF)
+      yhat <- tryCatch(qcat(rep(.5, nrow(IRF)), p=IRF),
+                       error=function(e) {
+                         qbinom(rep(.5, nrow(IRF)), Data$levels-1,
+                                rowMeans(IRF)) + min(Data$X[,3])
+                       })
       ### Output
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)
@@ -89,7 +93,7 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
       k     <- rnorm(Data$levels)
-      Ds    <- rnorm(Data$v)
+      Ds    <- rlnorm(Data$v)
       return(c(theta, b, k, Ds))
     }
     MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -104,13 +108,14 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
       theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
       k     <- parm[Data$pos.k]
-      Ds    <- parm[Data$pos.Ds]
+      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      parm[Data$pos.Ds] <- Ds
 
       ### Log-Priors
-      theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=T))
-      b.prior     <- sum(dnorm(b    , mean=0, sd=1, log=T))
-      k.prior     <- sum(dnorm(k    , mean=0, sd=1, log=T))
-      Ds.prior    <- sum(dnorm(Ds   , mean=0, sd=1, log=T))
+      theta.prior <- sum(dnorm(theta, mean=0   , sd=1   , log=T))
+      b.prior     <- sum(dnorm(b    , mean=0   , sd=1   , log=T))
+      k.prior     <- sum(dnorm(k    , mean=0   , sd=1   , log=T))
+      Ds.prior    <- sum(dlnorm(Ds  , meanlog=0, sdlog=1, log=T))
       Lpp <- theta.prior + b.prior + k.prior + Ds.prior
 
       ### Log-Likelihood
@@ -126,7 +131,11 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
       ### Log-Posterior
       LP <- LL + Lpp
       ### Estimates
-      yhat <- qcat(rep(.5, nrow(IRF)), p=IRF)
+      yhat <- tryCatch(qcat(rep(.5, nrow(IRF)), p=IRF),
+                       error=function(e) {
+                         qbinom(rep(.5, nrow(IRF)), Data$levels-1,
+                                rowMeans(IRF)) + min(Data$X[,3])
+                       })
       ### Output
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)
@@ -189,7 +198,7 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
     ## Maximum a Posteriori====
     #Iters=100; Smpl=1000
     Iters=Iters; Status=Iters/10
-    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData, algo=algo,
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData, algo=algo, seed=seed,
                maxit=Iters, temp=temp, tmax=tmax, REPORT=Status, Interval=Interval)
   } else {stop('Unknown optimization method.')}
 

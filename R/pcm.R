@@ -1,5 +1,5 @@
 pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
-                a.s=0.234, temp=1e-2, tmax=1, algo="GA", seed=666, Interval=1e-8){
+                a.s=0.234, temp=1e-2, tmax=NULL, algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
   #require(LaplacesDemon)
@@ -59,7 +59,11 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       ### Log-Posterior
       LP <- LL + Lpp
       ### Estimates
-      yhat <- qcat(rep(.5, nrow(IRF)), p=IRF)
+      yhat <- tryCatch(qcat(rep(.5, nrow(IRF)), p=IRF),
+                       error=function(e) {
+                         qbinom(rep(.5, nrow(IRF)), Data$levels-1,
+                                rowMeans(IRF)) + min(Data$X[,3])
+                       })
       ### Output
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)
@@ -72,7 +76,9 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
   } else if (p == 2) {
     ## Generalized Partial Credit Model====
     # Assemble data list
-    mon.names  <- "LP"
+    if (method == "MAP") {
+      mon.names  <- "LL"
+    } else { mon.names  <- "LP" }
     parm.names <- as.parm.names(list( theta=rep(0,nrow(x)), b=rep(0,ncol(x) * levels),
                                       Ds=rep(0,ncol(x)) ))
     pos.theta  <- grep("theta", parm.names)
@@ -81,7 +87,7 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v * Data$levels)
-      Ds    <- rnorm(Data$v)
+      Ds    <- rlnorm(Data$v)
       return(c(theta, b, Ds))
     }
     MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -95,12 +101,13 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       ## Prior parameters
       theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
-      Ds    <- parm[Data$pos.Ds]
+      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      parm[Data$pos.Ds] <- Ds
 
       ### Log-Priors
-      theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=T))
-      b.prior     <- sum(dnorm(b    , mean=0, sd=1, log=T))
-      Ds.prior    <- sum(dnorm(Ds   , mean=0, sd=1, log=T))
+      theta.prior <- sum(dnorm(theta, mean=0   , sd=1   , log=T))
+      b.prior     <- sum(dnorm(b    , mean=0   , sd=1   , log=T))
+      Ds.prior    <- sum(dlnorm(Ds  , meanlog=0, sdlog=1, log=T))
       Lpp <- theta.prior + b.prior + Ds.prior
 
       ### Log-Likelihood
@@ -116,7 +123,11 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       ### Log-Posterior
       LP <- LL + Lpp
       ### Estimates
-      yhat <- qcat(rep(.5, nrow(IRF)), p=IRF)
+      yhat <- tryCatch(qcat(rep(.5, nrow(IRF)), p=IRF),
+                       error=function(e) {
+                         qbinom(rep(.5, nrow(IRF)), Data$levels-1,
+                                rowMeans(IRF)) + min(Data$X[,3])
+                       })
       ### Output
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)
@@ -179,7 +190,7 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
     ## Maximum a Posteriori====
     #Iters=100; Smpl=1000
     Iters=Iters; Status=Iters/10
-    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData, algo=algo,
+    Fit <- MAP(Model=Model, parm=Initial.Values, Data=MyData, algo=algo, seed=seed,
                maxit=Iters, temp=temp, tmax=tmax, REPORT=Status, Interval=Interval)
   } else {stop('Unknown optimization method.')}
 

@@ -1,23 +1,23 @@
 \name{sirm}
 \alias{sirm}
-\title{Bayesian Strict Item Response model}
+\title{Bayesian Strict Rasch model}
 \description{
-An Bayesian implementation of the Strict Item Response model.
+An Bayesian implementation of the Strict Rasch model.
 }
 \usage{
 sirm(x, method="LA", Iters=100, Smpl=1000, Thin=1, a.s=0.234,
-     temp=1e-2, tmax=1, algo="GA", seed=666, Interval=1e-8)
+     temp=1e-2, tmax=NULL, algo="GA", seed=666, Interval=1e-8)
 }
 \arguments{
    \item{x}{A matrix in the wide format. You should certify that: the scores are binary, coded 0 and 1; all variables are named; and that are only variables to be modeled.}
-   \item{method}{The Bayesian estimation method to be used. Defaults to "LA" Variational Bayes. It can also be Laplace Approximation ("LA"), MCMC Hit-And-Run Metropolis ("MCMC"), Population Monte Carlo ("PMC"), Iterative Quadrature ("IQ"), or Maximum a Posteriori with SANN ("MAP").}
+   \item{method}{The Bayesian estimation method to be used. Defaults to "LA" Variational Bayes. It can also be Laplace Approximation ("LA"), MCMC Hit-And-Run Metropolis ("MCMC"), Population Monte Carlo ("PMC"), Iterative Quadrature ("IQ"), or Maximum a Posteriori ("MAP").}
    \item{Iters}{The maximum number of iterations. The default value, 100, is proposed for the default estimation method, "LA". For method "VB", we suggest 500 as the default. For method "MCMC", 20000. For method "PMC", 10. For method "IQ", 100. Finally, for method "MAP", if algo="SANN", than 50000, if algo="GA", than 500, and if algo="SD", than 100. However, ALWAYS check for convergence.}
    \item{Smpl}{This argument indicates the number of posterior samples to be taken with sampling importance resampling for the estimation methods "IQ","LA", and "VB". For the "PMC" method, this is the number of samples per mixture component. This argument is not used by both the "MCMC" and the "MAP" methods. The default value, 1000, is already fit for all the estimation methods that use this argument.}
    \item{Thin}{This is the number by which the posterior is thinned. Only "MCMC" and "PMC" estimation methods use this argument.}
    \item{a.s}{This is the alpha.star parameter, representing the target acceptance rate of the "MCMC" method. The value defaults to 0.234.}
    \item{temp}{Controls the "SANN" algorithm applied with the "MAP" method. It is the starting temperature for the cooling schedule. Defaults to 1e-2.}
-   \item{tmax}{Is the number of function evaluations at each temperature for the "SANN" algorithm applied with the "MAP" method. Defaults to 1.}
-   \item{algo}{The algorithm to be used if the estimation method is "MAP". Defaults to "GA", for a real-valued based genetic algorithm. The other possible values are "SANN", for Simulated Annealing, and "SD", for Steepest Gradient Descent.}
+   \item{tmax}{It is the number of function evaluations at each temperature for the "SANN" algorithm applied with the "MAP" method. Defaults to 1. It is also the absolute convergence tolerance for the sum of squared derivatives (SSD) when algo is "SD" or "ADAM". Defaults to 1e-3.}
+   \item{algo}{The algorithm to be used if the estimation method is "MAP". Defaults to "GA", for a real-valued based genetic algorithm. The other possible values are "SANN", for Simulated Annealing, "SD", for Steepest 2-Group Gradient Descent, and "ADAM", for Steepest Adaptive Moment Estimation.}
    \item{seed}{The random seed for guaranteeing replicable results. As most examples in LaplacesDemon, it defaults to 666.}
    \item{Interval}{This is the interval of numeric differencing when using the "SD" algorithm with the "MAP" method. Defaults to 1e-8.}
 }

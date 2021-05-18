@@ -1,7 +1,7 @@
 birm: Bayesian Item Response Models
 =============
 
-This package is intended to be an "play-and-plug" tool for Bayesian Item Response Modeling. Currently, specific unidimensional IRMs are implemented, but future versions will aim on adding more flexibility to the intermediary and advanced users.
+This package is intended to be an "plug-and-play" tool for Bayesian Item Response Modeling. Currently, specific unidimensional IRMs are implemented, but future versions will aim on adding more flexibility to the intermediary and advanced users.
 
 birm depends on LaplacesDemon, an open-source statistical package that is intended to provide a complete environment for Bayesian inference.
 
@@ -13,6 +13,8 @@ This package should be considered experimental. The following models are impleme
 * 1, 2, 3, 4, and 5-Parameter Logistic models (`plm` function)
 * Strict Item Response model (`sirm` function)
 * Bayesian Optimal Scoring (`optscr` function)
+* Generalized Graded Unfolding model (`ggum` function)
+* Fishburn models (`fishburn` function)
 
 All of the following estimation methods implemented in LaplacesDemon are available to use:
 
@@ -21,7 +23,7 @@ All of the following estimation methods implemented in LaplacesDemon are availab
 * Hit-And-Run Metropolis (`method = "MCMC"` argument)
 * Population Monte Carlo (`method = "PMC"` argument)
 * Iterative Quadrature (`method = "IQ"` argument)
-* Maximum a Posteriori estimation with Simulated Annealing, Genetic Algorithm, or Steepest Gradient Descent (`method = "MAP"` and `algo="SANN"`, `algo="GA"`, or `algo="SD"`; not originally implemented in LaplacesDemon)
+* Maximum a Posteriori estimation with Simulated Annealing, Genetic Algorithm, Steepest 2-Group Gradient Descent, or Steepest Adaptive Moment Estimation (`method = "MAP"` and `algo="SANN"`, `algo="GA"`, `algo="SD"`, or `algo="ADAM"`; not originally implemented in LaplacesDemon)
 
 # Installation #
 
