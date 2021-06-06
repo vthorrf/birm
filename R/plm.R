@@ -4,6 +4,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
                 seed=666, Interval=1e-8){
 
   ### Start====
+  set.seed(seed)
   #require(LaplacesDemon)
   #require(compiler)
   #require(parallel)
@@ -30,7 +31,8 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
-      Ds    <- rlnorm(1)
+      Ds    <- rnorm(1)
+      #Ds    <- rlnorm(1)
       return(c(theta, b, Ds))
     }
     MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -59,6 +61,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       bLL     <- rep(b    , each=Data$n)
       DLL     <- rep(Ds   , each=Data$v * Data$n)
       IRF     <- plogis( Data$scaling * DLL * (thetaLL - bLL) )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -86,7 +89,8 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
-      Ds    <- rlnorm(Data$v)
+      Ds    <- rnorm(Data$v)
+      #Ds    <- rlnorm(Data$v)
       return(c(theta, b, Ds))
     }
     MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -115,6 +119,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       bLL     <- rep(b    , each=Data$n)
       DLL     <- rep(Ds   , each=Data$n)
       IRF     <- plogis( DLL * (thetaLL - bLL) )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -162,7 +167,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       Ds    <- exp( parm[Data$pos.Ds] )
       #parm[Data$pos.Ds] <- Ds
       #c     <- interval( parm[Data$pos.c], 1e-100, (1 - 1e-100) )
-      c     <- plogis( parm[Data$pos.c] )
+      c     <- plogis( parm[Data$pos.c] ) / 2
       #parm[Data$pos.c] <- c
 
       ### Log-Priors
@@ -178,6 +183,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       DLL     <- rep(Ds   , each=Data$n)
       cLL     <- rep(c    , each=Data$n)
       IRF     <- cLL + ( (1 - cLL) / (1 + exp(-DLL * ( thetaLL - bLL ))) )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -208,9 +214,12 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
-      Ds    <- rlnorm(Data$v)
-      c     <- rbeta(Data$v, 1, 1)
-      UA    <- rbeta(Data$v, 1, 1)
+      Ds    <- rnorm(Data$v)
+      #Ds    <- rlnorm(Data$v)
+      c     <- rnorm(Data$v)
+      #c     <- rbeta(Data$v, 1, 1)
+      UA    <- rnorm(Data$v)
+      #UA    <- rbeta(Data$v, 1, 1)
       return(c(theta, b, Ds, c, UA))
     }
     MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -225,12 +234,15 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       ## Prior parameters
       theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
-      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
-      parm[Data$pos.Ds] <- Ds
-      c     <- interval( parm[Data$pos.c], 1e-100, (1 - 1e-100) )
-      parm[Data$pos.c] <- c
-      UA    <- interval( parm[Data$pos.UA], 1e-100, (1 - 1e-100) )
-      parm[Data$pos.UA] <- UA
+      Ds    <- exp(parm[Data$pos.Ds])
+      #Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      #parm[Data$pos.Ds] <- Ds
+      c     <- plogis(parm[Data$pos.c])/2
+      #c     <- interval( parm[Data$pos.c], 1e-100, (1 - 1e-100) )
+      #parm[Data$pos.c] <- c
+      UA    <- {plogis(parm[Data$pos.UA]) + 1} / 2
+      #UA    <- interval( parm[Data$pos.UA], 1e-100, (1 - 1e-100) )
+      #parm[Data$pos.UA] <- UA
 
       ### Log-Priors
       theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
@@ -247,6 +259,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       cLL     <- rep(c    , each=Data$n)
       UALL     <- rep(UA   , each=Data$n)
       IRF     <- cLL + ( (UALL - cLL) / (1 + exp(-DLL * ( thetaLL - bLL ))) )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -278,10 +291,14 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     PGF <- function(Data) {
       theta <- rnorm(Data$n)
       b     <- rnorm(Data$v)
-      Ds    <- rlnorm(Data$v)
-      c     <- rbeta(Data$v, 1, 1)
-      UA    <- rbeta(Data$v, 1, 1)
-      AS    <- rlnorm(Data$v)
+      Ds    <- rnorm(Data$v)
+      #Ds    <- rlnorm(Data$v)
+      c     <- rnorm(Data$v)
+      #c     <- rbeta(Data$v, 1, 1)
+      UA    <- rnorm(Data$v)
+      #UA    <- rbeta(Data$v, 1, 1)
+      AS    <- rnorm(Data$v)
+      #AS    <- rlnorm(Data$v)
       return(c(theta, b, Ds, c, UA, AS))
     }
     MyData <- list(parm.names=parm.names, mon.names=mon.names,
@@ -296,14 +313,18 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       ## Prior parameters
       theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
-      Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
-      parm[Data$pos.Ds] <- Ds
-      c     <- interval( parm[Data$pos.c], 1e-100, (1 - 1e-100) )
-      parm[Data$pos.c] <- c
-      UA    <- interval( parm[Data$pos.UA], 1e-100, (1 - 1e-100) )
-      parm[Data$pos.UA] <- UA
-      AS    <- interval( parm[Data$pos.AS], 1e-100, Inf )
-      parm[Data$pos.AS] <- AS
+      Ds    <- exp(parm[Data$pos.Ds])
+      #Ds    <- interval( parm[Data$pos.Ds], 1e-100, Inf )
+      #parm[Data$pos.Ds] <- Ds
+      c     <- plogis(parm[Data$pos.c])/2
+      #c     <- interval( parm[Data$pos.c], 1e-100, (1 - 1e-100) )
+      #parm[Data$pos.c] <- c
+      UA    <- {plogis(parm[Data$pos.UA]) + 1} / 2
+      #UA    <- interval( parm[Data$pos.UA], 1e-100, (1 - 1e-100) )
+      #parm[Data$pos.UA] <- UA
+      AS    <- exp(parm[Data$pos.AS])
+      #AS    <- interval( parm[Data$pos.AS], 1e-100, Inf )
+      #parm[Data$pos.AS] <- AS
 
       ### Log-Priors
       theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=TRUE))
@@ -322,6 +343,7 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       UALL    <- rep(UA   , each=Data$n)
       SLL     <- rep(AS   , each=Data$n)
       IRF     <- cLL + ( (UALL - cLL) / ((1 + exp(-DLL * ( thetaLL - bLL )))^SLL) )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -340,7 +362,6 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
   } else warning("Unknow model :(")
 
   ### Run!====
-  set.seed(seed)
   if (method=="VB") {
     ## Variational Bayes====
     #Iters=1000; Samples=1000
@@ -397,9 +418,9 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
   ### Results====
   if (p == 1) {
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = Fit$parm[pos.b]
-      disc = Fit$parm[pos.Ds]
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = Fit[["Model"]]$parm[pos.b]
+      disc = exp( Fit[["Model"]]$parm[pos.Ds] )
       FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
@@ -409,11 +430,11 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     if (method=="PMC") {
       abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
       diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
-      disc = Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1]
+      disc = exp( Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1] )
     } else {
       abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
       diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
-      disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
+      disc = exp( Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1] )
     }
     Dev    <- Fit$Deviance
     mDD    <- Dev - min(Dev)
@@ -429,9 +450,9 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     }
   } else if (p == 2) {
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = Fit$parm[pos.b]
-      disc = Fit$parm[pos.Ds]
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = Fit[["Model"]]$parm[pos.b]
+      disc = exp( Fit[["Model"]]$parm[pos.Ds] )
       FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
@@ -441,11 +462,11 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     if (method=="PMC") {
       abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
       diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
-      disc = Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1]
+      disc = exp( Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1] )
     } else {
       abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
       diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
-      disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
+      disc = exp( Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1] )
     }
     Dev    <- Fit$Deviance
     mDD    <- Dev - min(Dev)
@@ -461,10 +482,10 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     }
   } else if (p == 3) {
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = Fit$parm[pos.b]
-      disc = exp(Fit$parm[pos.Ds])
-      gues = plogis(Fit$parm[pos.c])
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = Fit[["Model"]]$parm[pos.b]
+      disc = exp(Fit[["Model"]]$parm[pos.Ds])
+      gues = plogis(Fit[["Model"]]$parm[pos.c])/2
       FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
@@ -475,12 +496,12 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
       abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
       diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
       disc = exp(Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1])
-      gues = plogis(Fit$Summary[grep("c", rownames(Fit$Summary), fixed=TRUE),1])
+      gues = plogis(Fit$Summary[grep("c", rownames(Fit$Summary), fixed=TRUE),1])/2
     } else {
       abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
       diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
       disc = exp(Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1])
-      gues = plogis(Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1])
+      gues = plogis(Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1])/2
     }
     Dev    <- Fit$Deviance
     mDD    <- Dev - min(Dev)
@@ -496,11 +517,11 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     }
   } else if (p == 4) {
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = Fit$parm[pos.b]
-      disc = Fit$parm[pos.Ds]
-      gues = Fit$parm[pos.c]
-      UpAs = Fit$parm[pos.UA]
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = Fit[["Model"]]$parm[pos.b]
+      disc = exp(Fit[["Model"]]$parm[pos.Ds])
+      gues = plogis(Fit[["Model"]]$parm[pos.c])/2
+      UpAs = {plogis(Fit[["Model"]]$parm[pos.UA])+1}/2
       FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
@@ -511,15 +532,15 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     if (method=="PMC") {
       abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
       diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
-      disc = Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1]
-      gues = Fit$Summary[grep("c", rownames(Fit$Summary), fixed=TRUE),1]
-      UpAs = Fit$Summary[grep("UA", rownames(Fit$Summary), fixed=TRUE),1]
+      disc = exp(Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1])
+      gues = plogis(Fit$Summary[grep("c", rownames(Fit$Summary), fixed=TRUE),1])/2
+      UpAs = {plogis(Fit$Summary[grep("UA", rownames(Fit$Summary), fixed=TRUE),1])+1}/2
     } else {
       abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
       diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
-      disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
-      gues = Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1]
-      UpAs = Fit$Summary1[grep("UA", rownames(Fit$Summary1), fixed=TRUE),1]
+      disc = exp(Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1])
+      gues = plogis(Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1])/2
+      UpAs = {plogis(Fit$Summary1[grep("UA", rownames(Fit$Summary1), fixed=TRUE),1])+1}/2
     }
     Dev    <- Fit$Deviance
     mDD    <- Dev - min(Dev)
@@ -536,33 +557,33 @@ plm <- function(x, p=1, scaling=1.7, method="LA",
     }
   } else if (p == 5) {
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = Fit$parm[pos.b]
-      disc = Fit$parm[pos.Ds]
-      gues = Fit$parm[pos.c]
-      UpAs = Fit$parm[pos.UA]
-      asym = Fit$parm[pos.AS]
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = Fit[["Model"]]$parm[pos.b]
+      disc = exp(Fit[["Model"]]$parm[pos.Ds])
+      gues =  plogis(Fit[["Model"]]$parm[pos.c])/2
+      UpAs = {plogis(Fit[["Model"]]$parm[pos.UA])+1}/2
+      asym = exp(Fit[["Model"]]$parm[pos.AS])
       FI   = Fit$FI
 
       Results <- list("Data"=MyData,"Model"=Model,"Fit"=Fit,
                       'abil'=abil,'diff'=diff,"disc"=disc,"gues"=gues,
                       "UpAs"=UpAs,"asym"=asym,'FitIndexes'=FI)
     } else {
-      ## Four-parameter logistic====
+      ## Five-parameter logistic====
       if (method=="PMC") {
         abil = Fit$Summary[grep("theta", rownames(Fit$Summary), fixed=TRUE),1]
         diff = Fit$Summary[grep("b", rownames(Fit$Summary), fixed=TRUE),1]
-        disc = Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1]
-        gues = Fit$Summary[grep("c", rownames(Fit$Summary), fixed=TRUE),1]
-        UpAs = Fit$Summary[grep("UA", rownames(Fit$Summary), fixed=TRUE),1]
-        asym = Fit$Summary[grep("AS", rownames(Fit$Summary), fixed=TRUE),1]
+        disc = exp(Fit$Summary[grep("Ds", rownames(Fit$Summary), fixed=TRUE),1])
+        gues = plogis(Fit$Summary[grep("c", rownames(Fit$Summary), fixed=TRUE),1])/2
+        UpAs = {plogis(Fit$Summary[grep("UA", rownames(Fit$Summary), fixed=TRUE),1])+1}/2
+        asym = exp(Fit$Summary[grep("AS", rownames(Fit$Summary), fixed=TRUE),1])
       } else {
         abil = Fit$Summary1[grep("theta", rownames(Fit$Summary1), fixed=TRUE),1]
         diff = Fit$Summary1[grep("b", rownames(Fit$Summary1), fixed=TRUE),1]
-        disc = Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1]
-        gues = Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1]
-        UpAs = Fit$Summary1[grep("UA", rownames(Fit$Summary1), fixed=TRUE),1]
-        asym = Fit$Summary1[grep("AS", rownames(Fit$Summary1), fixed=TRUE),1]
+        disc = exp(Fit$Summary1[grep("Ds", rownames(Fit$Summary1), fixed=TRUE),1])
+        gues = plogis(Fit$Summary1[grep("c", rownames(Fit$Summary1), fixed=TRUE),1])/2
+        UpAs = {plogis(Fit$Summary1[grep("UA", rownames(Fit$Summary1), fixed=TRUE),1])+1}/2
+        asym = exp(Fit$Summary1[grep("AS", rownames(Fit$Summary1), fixed=TRUE),1])
       }
       Dev    <- Fit$Deviance
       mDD    <- Dev - min(Dev)

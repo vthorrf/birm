@@ -3,6 +3,7 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
                  algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
+  set.seed(seed)
   #require(LaplacesDemon)
   #require(compiler)
   #require(parallel)
@@ -48,6 +49,7 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
     bLL     <- rep(b    , each=Data$n)
     #IRF     <- thetaLL / ( thetaLL + bLL )
     IRF     <- 1 / ( 1 + (bLL / thetaLL) )
+    IRF[which(IRF == 1)] <- 1 - 1e-7
     LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
     ### Log-Posterior
@@ -64,7 +66,6 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
   is.bayesian(Model, Initial.Values, MyData)
 
   ### Run!====
-  set.seed(seed)
   if (method=="VB") {
     Iters=Iters; Smpl=Smpl
     Fit <- VariationalBayes(Model=Model, parm=Initial.Values, Data=MyData,
@@ -112,8 +113,8 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
 
   ### Results====
   if (method=="MAP") {
-    abil = Fit$parm[pos.theta]
-    diff = Fit$parm[pos.b]
+    abil = Fit[["Model"]]$parm[pos.theta]
+    diff = Fit[["Model"]]$parm[pos.b]
     FI    = Fit$FI
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,

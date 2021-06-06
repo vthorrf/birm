@@ -2,6 +2,7 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
                 a.s=0.234, temp=1e-2, tmax=NULL, algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
+  set.seed(seed)
   #require(LaplacesDemon)
   #require(compiler)
   #require(parallel)
@@ -54,6 +55,7 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       eta      <- thetaLL - bLL
       exp.psum <- exp(matrixStats::rowCumsums(eta))
       IRF      <- exp.psum / rowSums(exp.psum)
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL       <- sum( dcat(Data$X[,3], p=IRF, log=T) )
 
       ### Log-Posterior
@@ -118,6 +120,7 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
       eta      <- DLL * (thetaLL - bLL)
       exp.psum <- exp(matrixStats::rowCumsums(eta))
       IRF      <- exp.psum / rowSums(exp.psum)
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL       <- sum( dcat(Data$X[,3], p=IRF, log=T) )
 
       ### Log-Posterior
@@ -140,7 +143,6 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
   } else warning("Unknow model :(")
 
   ### Run!====
-  set.seed(seed)
   if (method=="VB") {
     ## Variational Bayes====
     #Iters=1000; Samples=1000
@@ -198,8 +200,8 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
   if (p == 1) {
 
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = matrix(Fit$parm[pos.b], nrow=ncol(x))
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = matrix(Fit[["Model"]]$parm[pos.b], nrow=ncol(x))
       rownames(diff) = colnames(x)
       colnames(diff) = paste("Answer_Key",1:levels,sep="_")
       FI    = Fit$FI
@@ -234,11 +236,11 @@ pcm <- function(x, levels=NULL, p=1, method="LA", Iters=100, Smpl=1000, Thin=1,
   } else if (p == 2) {
 
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = matrix(Fit$parm[pos.b], nrow=ncol(x))
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = matrix(Fit[["Model"]]$parm[pos.b], nrow=ncol(x))
       rownames(diff) = colnames(x)
       colnames(diff) = paste("Answer_Key",1:levels,sep="_")
-      disc = Fit$parm[pos.Ds]
+      disc = Fit[["Model"]]$parm[pos.Ds]
       FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,

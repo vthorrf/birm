@@ -3,6 +3,7 @@ rasch <- function(x, interaction=F, method="LA", Iters=100, Smpl=1000,
                   seed=666, Interval=1e-8){
 
   ### Start====
+  set.seed(seed)
   #require(LaplacesDemon)
   #require(compiler)
   #require(parallel)
@@ -50,6 +51,7 @@ rasch <- function(x, interaction=F, method="LA", Iters=100, Smpl=1000,
       thetaLL <- rep(theta, times=Data$v)
       bLL     <- rep(b    , each=Data$n)
       IRF     <- plogis( thetaLL - bLL )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -105,6 +107,7 @@ rasch <- function(x, interaction=F, method="LA", Iters=100, Smpl=1000,
       bLL     <- rep(b    , each=Data$n)
       deltaLL <- rep(delta, each=Data$n * Data$v)
       IRF     <- plogis( thetaLL + bLL + (deltaLL * thetaLL * bLL) )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -123,7 +126,6 @@ rasch <- function(x, interaction=F, method="LA", Iters=100, Smpl=1000,
   } else stop("Unknow model :(")
 
   ### Run!====
-  set.seed(seed)
   if (method=="VB") {
     ## Variational Bayes====
     #Iters=1000; Samples=1000
@@ -179,15 +181,15 @@ rasch <- function(x, interaction=F, method="LA", Iters=100, Smpl=1000,
 
   ### Results====
   if (method=="MAP") {
-    abil = Fit$parm[pos.theta]
-    diff = Fit$parm[pos.b]
+    abil = Fit[["Model"]]$parm[pos.theta]
+    diff = Fit[["Model"]]$parm[pos.b]
     FI    = Fit$FI
 
     if (interaction == F) {
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                       'abil'=abil,'diff'=diff,'FitIndexes'=FI)
     } else {
-      weight = Fit$parm[pos.delta]
+      weight = Fit[["Model"]]$parm[pos.delta]
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
                       'abil'=abil,'diff'=diff,'weight'=weight,'FitIndexes'=FI)
     }

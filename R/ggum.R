@@ -3,6 +3,7 @@ ggum <- function(x, K=NULL, method="LA", Iters=100, Smpl=1000,
                  algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
+  set.seed(seed)
   #require(LaplacesDemon)
   #require(compiler)
   #require(parallel)
@@ -71,6 +72,7 @@ ggum <- function(x, K=NULL, method="LA", Iters=100, Smpl=1000,
                 nrow=nrow(Data$X), ncol=Data$levels)
     P2  <- exp(DLL * {{{{2*K} - k - 1} * {diff}} - tauk})
     IRF <- {P1 + P2} / matrix(rowSums(P1 + P2), nrow=nrow(Data$X), ncol=Data$levels)
+    IRF[which(IRF == 1)] <- 1 - 1e-7
     LL  <- sum( dcat(Data$X[,3], p=IRF, log=T) )
 
     ### Log-Posterior
@@ -91,7 +93,6 @@ ggum <- function(x, K=NULL, method="LA", Iters=100, Smpl=1000,
   is.bayesian(Model, Initial.Values, MyData)
 
   ### Run!====
-  set.seed(seed)
   if (method=="VB") {
     Iters=Iters; Smpl=Smpl
     Fit <- VariationalBayes(Model=Model, parm=Initial.Values, Data=MyData,
@@ -139,12 +140,12 @@ ggum <- function(x, K=NULL, method="LA", Iters=100, Smpl=1000,
 
   ### Results====
   if (method=="MAP") {
-    abil = Fit$parm[pos.theta]
-    diff = Fit$parm[pos.b][c(1:MyData$v)]
-    tau = matrix(Fit$parm[pos.b][-c(1:MyData$v)], nrow=ncol(x))
+    abil = Fit[["Model"]]$parm[pos.theta]
+    diff = Fit[["Model"]]$parm[pos.b][c(1:MyData$v)]
+    tau = matrix(Fit[["Model"]]$parm[pos.b][-c(1:MyData$v)], nrow=ncol(x))
     rownames(tau) = colnames(x)
     colnames(tau) = paste("Answer_Key",1:K,sep="_")
-    disc = Fit$parm[pos.Ds]
+    disc = Fit[["Model"]]$parm[pos.Ds]
     FI    = Fit$FI
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,'abil'=abil,

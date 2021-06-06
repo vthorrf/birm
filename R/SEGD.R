@@ -13,7 +13,7 @@ Gammas <- function(Model, par, Data, est, df, vi, si, iter, epsilon) {
 SEGD <- function(Model, startvalue, Data, Interval=1e-6, maxit=100, tol=1e-3) {
   # Opening message
   cat("Steepest Adam Maximum a Posteriori estimation will run for ",
-      maxit, " iterations.\n\n", sep="")
+      maxit, " iterations at most.\n\n", sep="")
   startTime = proc.time()
 
   # Initial settings
@@ -22,6 +22,7 @@ SEGD <- function(Model, startvalue, Data, Interval=1e-6, maxit=100, tol=1e-3) {
   par     <- s <- v <- G <- array(dim = c(maxit,length(startvalue)))
   GG <- array(dim = c(maxit,3))
   f       <- vector("numeric", length=maxit)
+  convergence = F
 
   # First step
   G[1,] <- grad(Model, startvalue, Data, Interval=Interval)
@@ -38,10 +39,16 @@ SEGD <- function(Model, startvalue, Data, Interval=1e-6, maxit=100, tol=1e-3) {
   # Run ADAM algorithm
   for(i in 2:maxit) {
     G[i,]  <- grad(Model, par[i-1,], Data, Interval=Interval)
-    GG[i,] <- suppressWarnings(unlist(optim(par=c(0,0,0), fn=Gammas, Model=Model,
-                                            df=G[i,], Data=Data, est=par[i-1,],
-                                            vi=v[i-1,], si=s[i-1,], iter=i,
-                                            epsilon=epsilon)$par))
+    GG[i,] <- suppressWarnings(unlist(ucminf(par=c(0,0,0), fn=Gammas, Model=Model,
+                                             df=G[i,], Data=Data, est=par[i-1,],
+                                             vi=v[i-1,], si=s[i-1,], iter=i,
+                                             epsilon=epsilon)$par))
+    if (sum(G[i,]) == 0) {
+      GG[i,] <- suppressWarnings(unlist(optim(par=c(0,0,0), fn=Gammas, Model=Model,
+                                              df=G[i,], Data=Data, est=par[i-1,],
+                                              vi=v[i-1,], si=s[i-1,], iter=i,
+                                              epsilon=epsilon)$par))
+    }
     gammav  <- GG[i,1]
     gammas  <- GG[i,2]
     alpha   <- GG[i,3]
@@ -49,11 +56,17 @@ SEGD <- function(Model, startvalue, Data, Interval=1e-6, maxit=100, tol=1e-3) {
     s[i,]   <- {{gammas * s[i-1,]} + {{1 - gammas} * {G[i,]*G[i,]}}}/{1 - {gammas^i}}
     par[i,] <- par[i-1,] + {{alpha*v[i,]}/{epsilon+sqrt(s[i,])}}
     f[i]    <- Model(par[i,], Data)[["LP"]]
-    if (c(G[i,] %*% G[i,]) < tol) {
+    if ({abs(c(G[i,] %*% G[i,])) < tol} |
+        {abs(c(GG[i,] %*% GG[i,])) < {tol * tol}} |
+        {mean(abs(c(G[i,] - G[i-1,]))) < tol}) {
+      convergence = T
       setTxtProgressBar(pb, maxit)
       cat("\nConvergence achieved!")
       break
     } else { setTxtProgressBar(pb, i) }
+  }
+  if (convergence == F) {
+    cat("\nConvergence may not have been achieved!")
   }
   if (i < maxit) {
     f   <- f[-c({i+1}:maxit)]
@@ -70,8 +83,8 @@ SEGD <- function(Model, startvalue, Data, Interval=1e-6, maxit=100, tol=1e-3) {
   stopTime = proc.time()
   elapsedTime = stopTime - startTime
   cat("It took ",round(elapsedTime[3],2)," secs for the run to finish. \n", sep="")
-  plot.ts(f, ylab="LogPosterior", xlab="Iteration",
-          xlim=c(1,length(f)), ylim=c(min(f), max(f)))
+  #plot.ts(f, ylab="LogPosterior", xlab="Iteration",
+  #        xlim=c(1,length(f)), ylim=c(min(f), max(f)))
 
   # Return results
   Results <- list("LogPosterior"=f, "Estimates"=par, "Gradients"=G, "DSG"=s,

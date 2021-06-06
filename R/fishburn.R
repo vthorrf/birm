@@ -3,6 +3,7 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
                      algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
+  set.seed(seed)
   #require(LaplacesDemon)
   #require(compiler)
   #require(parallel)
@@ -49,6 +50,7 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       thetaLL <- rep(theta, times=Data$v)
       bLL     <- rep(b    , each=Data$n)
       IRF     <- plogis( thetaLL + bLL )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -60,7 +62,7 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       return(Modelout)
     }
   } else if (model == 2) {
-    ############################## 02 - Double-distributive
+    ############################## 02 - Multiplicative model
     Model <- function(parm, Data){
 
       ## Prior parameters
@@ -77,6 +79,7 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       bLL     <- rep(b    , each=Data$n)
       #IRF     <- plogis( thetaLL * bLL )
       IRF     <- tanh( thetaLL * bLL )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -88,7 +91,7 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       return(Modelout)
     }
   } else if (model == 3) {
-    ############################## 03 - Person-distributive
+    ############################## 03 - Person-multiplicative
     Model <- function(parm, Data){
 
       ## Prior parameters
@@ -103,7 +106,9 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       ### Log-Likelihood
       thetaLL <- rep(theta, times=Data$v)
       bLL     <- rep(b    , each=Data$n)
-      IRF     <- plogis( log(thetaLL) + {thetaLL * bLL} )
+      IRF     <- plogis({{log(thetaLL) + max(b)}-{max(b)*thetaLL}} + {thetaLL * bLL})
+      #IRF     <- plogis( log(thetaLL) + {thetaLL * bLL} )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -115,7 +120,7 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       return(Modelout)
     }
   } else if (model == 4) {
-    ############################## 04 - Item-distributive
+    ############################## 04 - Item-multiplicative
     Model <- function(parm, Data){
 
       ## Prior parameters
@@ -130,7 +135,9 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       ### Log-Likelihood
       thetaLL <- rep(theta, times=Data$v)
       bLL     <- rep(b    , each=Data$n)
-      IRF     <- plogis( log(bLL) + {thetaLL * bLL} )
+      IRF     <- plogis({{log(bLL) + max(theta)}-{max(theta)*bLL}} + {bLL * thetaLL})
+      #IRF     <- plogis( log(bLL) + {thetaLL * bLL} )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -142,7 +149,10 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       return(Modelout)
     }
   } else if (model == 5) {
-    ############################## 05 - Interaction
+    #f <- function(a, x) {a + x} + {a * x}
+    #f_a <- function(a) f(a,1) - f(a,0) - f(0,1)
+    #f_x <- function(x) f(1,x) - f(0,x) - f(1,0)
+    ############################## 05 - Additive-Multiplicative
     Model <- function(parm, Data){
 
       ## Prior parameters
@@ -157,8 +167,10 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       ### Log-Likelihood
       thetaLL <- rep(theta, times=Data$v)
       bLL     <- rep(b    , each=Data$n)
-      #IRF     <- plogis( {thetaLL + bLL} + {exp(thetaLL) * exp(bLL)} )
       IRF     <- plogis( {thetaLL + bLL} + {thetaLL * bLL} )
+      #IRF     <- plogis( {thetaLL + bLL} + {f_a(thetaLL) * f_x(bLL)} )
+      IRF[which(IRF == 1)] <- 1 - 1e-7
+      IRF[which(IRF == 0)] <- 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
       ### Log-Posterior
@@ -169,14 +181,13 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
       Modelout <- list(LP=LP, Dev=-2*LL, Monitor=LP, yhat=yhat, parm=parm)
       return(Modelout)
     }
-  } else { stop("Unknown model! Check if expecification is correct.") }
+  } else { stop("Unknown model! Check if model specification is correct.") }
   Model <- compiler::cmpfun(Model)
   Initial.Values <- GIV(Model, MyData, PGF=T)
   is.model(Model, Initial.Values, MyData)
   is.bayesian(Model, Initial.Values, MyData)
 
   ### Run!====
-  set.seed(seed)
   if (method=="VB") {
     Iters=Iters; Smpl=Smpl
     Fit <- VariationalBayes(Model=Model, parm=Initial.Values, Data=MyData,
@@ -224,8 +235,8 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
 
   ### Results====
   if (method=="MAP") {
-    abil = Fit$parm[pos.theta]
-    diff = Fit$parm[pos.b]
+    abil = Fit[["Model"]]$parm[pos.theta]
+    diff = Fit[["Model"]]$parm[pos.b]
     FI    = Fit$FI
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,

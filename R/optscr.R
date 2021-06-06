@@ -3,6 +3,7 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
                    B=TRUE, temp=1e-2, tmax=NULL, algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
+  set.seed(seed)
   #require(LaplacesDemon)
   #require(compiler)
   #require(parallel)
@@ -116,6 +117,7 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
     W       <- LLfn(theta, kappa, Data$knots, Data$degree,
                     Data$n, Data$v, Data$SS, Data$K, Data$M)
     IRF     <- 1 / ( 1 + exp(-W) )
+    IRF[which(IRF == 1)] <- 1 - 1e-7
     LL      <- sum( dbinom(Data$X[,3], size=max(Data$X[,3]), prob=IRF, log=T) )
 
     ### Log-Posterior
@@ -132,7 +134,6 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   is.bayesian(Model, Initial.Values, MyData)
 
   ### Run!====
-  set.seed(seed)
   if (method=="VB") {
     Iters=Iters; Smpl=Smpl
     Fit <- VariationalBayes(Model=Model, parm=Initial.Values, Data=MyData,
@@ -186,7 +187,7 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
 
   ### Results====
   if (method=="MAP") {
-    ppkp <- Fit$parm[pos.kappa]
+    ppkp <- Fit[["Model"]]$parm[pos.kappa]
     if(basis=="legendre") {
       kappa  = matrix(ppkp,ncol=(degree))
       rownames(kappa) <- colnames(x)
@@ -207,7 +208,7 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
       colnames(kappaout) <- paste("Kappa_OUT_",1:M,sep="")
       kappa    <- list(kappain, kappaout)
     }else stop("Unknow basis type :/")
-    abil <- Fit$parm[pos.theta]
+    abil <- Fit[["Model"]]$parm[pos.theta]
     FI    = Fit$FI
 
     Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,

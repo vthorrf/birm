@@ -16,9 +16,10 @@ MAP <- function(Model, parm, Data, algo=NULL, seed=666,
     Results <- SE(Model, parm, Data, maxit=maxit, Interval=Interval, tol=tmax)
   } else stop("Unkown estimation algorithm")
 
-  Results$FI <- list("AIC"=(2 * length(parm)) + Results$Dev,
-                     "BIC"=(log(Data$n) * length(parm)) + Results$Dev,
-                     "CAIC"=((log(Data$n) + 1) * length(parm)) + Results$Dev,
-                     "SABIC"=(log((Data$n + 2)/24) * length(parm)) + Results$Dev)
+  Deviance   <- Results[["Model"]]$Dev
+  Results$FI <- list("AIC"=(2 * length(parm)) + Deviance,
+                     "BIC"=(log(Data$n) * length(parm)) + Deviance,
+                     "CAIC"=((log(Data$n) + 1) * length(parm)) + Deviance,
+                     "SABIC"=(log((Data$n + 2)/24) * length(parm)) + Deviance)
   return(Results)
 }

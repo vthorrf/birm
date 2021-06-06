@@ -14,5 +14,6 @@ GA <- function(Model, parm, Data, maxit) {
                   upper=rep(5,length(Data$parm.names)),
                   names=Data$parm.names, monitor=T,
                   maxiter=maxit, suggestions=parm)
-  return(Model(estimates@solution, Data))
+  Results   <- list("Model"=Model(estimates@solution, Data), "Fit"=estimates)
+  return(Results)
 }

@@ -3,6 +3,7 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
                 algo="GA", seed=666, Interval=1e-8){
 
   ### Start====
+  set.seed(seed)
   #require(LaplacesDemon)
   #require(compiler)
   #require(parallel)
@@ -60,6 +61,7 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
       eta      <- thetaLL - bLL - kLL
       exp.psum <- exp(matrixStats::rowCumsums(eta))
       IRF      <- exp.psum / rowSums(exp.psum)
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL       <- sum( dcat(Data$X[,3], p=IRF, log=T) )
 
       ### Log-Posterior
@@ -126,6 +128,7 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
       eta      <- DLL * (thetaLL - bLL - kLL)
       exp.psum <- exp(matrixStats::rowCumsums(eta))
       IRF      <- exp.psum / rowSums(exp.psum)
+      IRF[which(IRF == 1)] <- 1 - 1e-7
       LL       <- sum( dcat(Data$X[,3], p=IRF, log=T) )
 
       ### Log-Posterior
@@ -148,7 +151,6 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
   } else warning("Unknow model :(")
 
   ### Run!====
-  set.seed(seed)
   if (method=="VB") {
     ## Variational Bayes====
     #Iters=1000; Samples=1000
@@ -205,9 +207,9 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
   ### Results====
   if (p == 1) {
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = Fit$parm[pos.b]
-      k    = Fit$parm[pos.k]
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = Fit[["Model"]]$parm[pos.b]
+      k    = Fit[["Model"]]$parm[pos.k]
       FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
@@ -237,10 +239,10 @@ rsm <- function(x, levels=NULL, p=1, method="LA", Iters=100,
     }
   } else if (p == 2) {
     if (method=="MAP") {
-      abil = Fit$parm[pos.theta]
-      diff = Fit$parm[pos.b]
-      k    = Fit$parm[pos.k]
-      disc = Fit$parm[pos.Ds]
+      abil = Fit[["Model"]]$parm[pos.theta]
+      diff = Fit[["Model"]]$parm[pos.b]
+      k    = Fit[["Model"]]$parm[pos.k]
+      disc = Fit[["Model"]]$parm[pos.Ds]
       FI    = Fit$FI
 
       Results <- list("Data"=MyData,"Fit"=Fit,"Model"=Model,
