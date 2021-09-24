@@ -2,11 +2,16 @@
 post <- function(Model, Data, par) {
   return(Model(par, Data)[["LP"]])
 }
-grad <- function(Model, par, Data, Interval=1e-8) {
+grad <- function(mod, par, ..., Interval=1e-6) {
   mat  <- matrix(par, nrow=length(par), ncol=length(par))
-  diag(mat) <- par + Interval
-  df <- {apply(mat, 2, post, Model=Model, Data=Data) - Model(par, Data)[["LP"]]} /
-        Interval
+  for (i in 1:ncol(mat)) {
+    mat[i,i] <- par[i] + Interval
+  }
+  df <- vector("numeric", length=length(par))
+  f_x <- mod(par, ...)[["LP"]]
+  for (i in 1:ncol(mat)) {
+    df[i] <- (mod(mat[,i], ...)[["LP"]] - f_x) / Interval
+  }
   df[which(!is.finite(df))] <- 0
   return(df)
 }
@@ -14,10 +19,10 @@ steep <- function(Model, par, Data, est, df) {
   -Model(est + {par[1]*df*{(abs(df) >  sd(df)) * 1}} +
                {par[2]*df*{(abs(df) <= sd(df)) * 1}}, Data)[["LP"]]
 }
-#require(ucminf)
+reltol <- function(x, tol) tol * (abs(x) + tol)
 
 ### Steepest N-group Gradient Descent MAP====
-SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100, tol=1e-3) {
+SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100, tol=1e-8) {
   # Opening message
   cat("Steepest Gradient Descent Maximum a Posteriori estimation will run for ",
       maxit, " iterations at most.\n\n", sep="")
@@ -63,10 +68,8 @@ SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100, tol=1e-3) {
       {step[run,1]*df[run,]*{(abs(df[run,]) >  sd(df[run,])) * 1}} +
       {step[run,2]*df[run,]*{(abs(df[run,]) <= sd(df[run,])) * 1}}
     f[run]    <- Model(par[run,], Data)[["LP"]]
-    # Update progress bar
-    if ({abs(c(df[run,] %*% df[run,])) < tol} |
-        {abs(c(step[run,] %*% step[run,])) < {tol * tol}} |
-        {mean(abs(c(df[run,] - df[run-1,]))) < tol}) {
+    # Update progress bar and check convergence
+    if (reltol(f[run], tol) > abs(f[run] - f[run-1])) {
       convergence = T
       setTxtProgressBar(pb, maxit)
       cat("\nConvergence achieved!")
@@ -89,8 +92,6 @@ SNGD <- function(Model, startvalue, Data, Interval=1e-8, maxit=100, tol=1e-3) {
   stopTime = proc.time()
   elapsedTime = stopTime - startTime
   cat("It took ",round(elapsedTime[3],2)," secs for the run to finish. \n", sep="")
-  #plot.ts(f, ylab="LogPosterior", xlab="Iteration",
-  #        xlim=c(1,length(f)), ylim=c(min(f), max(f)))
 
   # Return results
   Results <- list("LogPosterior"=f, "Estimates"=par, "Gradients"=df,

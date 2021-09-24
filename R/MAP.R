@@ -9,11 +9,13 @@ MAP <- function(Model, parm, Data, algo=NULL, seed=666,
   } else if (algo=="GA") {
     Results <- GA(Model, parm, Data, maxit=maxit)
   } else if (algo=="SD") {
-    if (is.null(tmax)) tmax = 1e-3
+    if (is.null(tmax)) tmax = 1e-8
     Results <- SD(Model, parm, Data, maxit=maxit, Interval=Interval, tol=tmax)
   } else if (algo=="ADAM") {
-    if (is.null(tmax)) tmax = 1e-3
+    if (is.null(tmax)) tmax = 1e-8
     Results <- SE(Model, parm, Data, maxit=maxit, Interval=Interval, tol=tmax)
+  } else if (algo=="HAR") {
+    Results <- HR(Model, parm, Data, maxit=maxit, Interval=Interval)
   } else stop("Unkown estimation algorithm")
 
   Deviance   <- Results[["Model"]]$Dev

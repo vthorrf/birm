@@ -17,7 +17,8 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   if (is.null(levels)) {
     base_scor <- rowSums(x) / (max(x) * ncol(x))
   } else base_scor <- rowSums(x) / ((levels-1) * ncol(x))
-  if (is.null(knots)) knots <- unique(sort(qtrunc(base_scor, "norm", a=-2, b=2)))
+  #if (is.null(knots)) knots <- unique(sort(qtrunc(base_scor, "norm", a=-2, b=2)))
+  if (is.null(knots)) knots <- quantile(qtrunc(base_scor, "norm", a=-2, b=2), seq(0, .95, len=5))
   if (is.null(err)) {
     err <- rep(1e-4,nrow(x))
   } else if(length(err) == nrow(x)) {
@@ -49,7 +50,8 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   PGF <- function(Data) {
     kappa <- rnorm(Data$K, 0, 1)
     #theta <- Data$SS
-    theta <- rtrunc(Data$n, "norm", -2, 2, mean=Data$SS, sd=Data$err)
+    #theta <- rtrunc(Data$n, "norm", -2, 2, mean=Data$SS, sd=Data$err)
+    theta <- rnorm(Data$n, mean=Data$SS, sd=Data$err)
     return(c(kappa, theta))
   }
   relu   <- function(x) x * (x > 0)
@@ -78,8 +80,10 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
       #  splines::bs(theta, knots=knots, degree=degree,
       #              Boundary.knots=c(min(theta), max(theta)))
       #}))
+      #BSP  <- apply(splines::bs(theta, knots=knots, degree=degree,
+      #              Boundary.knots=c(min(theta), max(theta))), 2, rep, times=v)
       BSP  <- apply(splines::bs(theta, knots=knots, degree=degree,
-                    Boundary.knots=c(min(theta), max(theta))), 2, rep, times=v)
+                    Boundary.knots=c(min(knots), max(knots))), 2, rep, times=v)
       W       <- rowSums( kLL * BSP )
     } else if(basis=="nn"){
       ### Neural Network
@@ -102,8 +106,9 @@ optscr <- function(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL
   Model <- function(parm, Data){
 
     ## Prior parameters
-    theta <- interval(parm[Data$pos.theta], -2, 2)
-    parm[Data$pos.theta] <- theta
+    #theta <- interval(parm[Data$pos.theta], -2, 2)
+    theta <- tanh(parm[Data$pos.theta]) * 2
+    #parm[Data$pos.theta] <- theta
     kappa <- tanh(parm[Data$pos.kappa])
 
     ### Log-Priors

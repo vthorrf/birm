@@ -95,19 +95,21 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
     Model <- function(parm, Data){
 
       ## Prior parameters
-      theta <- exp(parm[Data$pos.theta])
+      #theta <- exp(parm[Data$pos.theta])
+      theta <- parm[Data$pos.theta]
       b     <- parm[Data$pos.b]
 
       ### Log-Priors
-      theta.prior <- sum(dlnorm(theta, meanlog=0, sdlog=1, log=T))
+      #theta.prior <- sum(dlnorm(theta, meanlog=0, sdlog=1, log=T))
+      theta.prior <- sum(dnorm(theta, mean=0, sd=1, log=T))
       b.prior     <- sum(dnorm(b    , mean=0, sd=1, log=T))
       Lpp <- theta.prior + b.prior
 
       ### Log-Likelihood
       thetaLL <- rep(theta, times=Data$v)
       bLL     <- rep(b    , each=Data$n)
-      IRF     <- plogis({{log(thetaLL) + max(b)}-{max(b)*thetaLL}} + {thetaLL * bLL})
-      #IRF     <- plogis( log(thetaLL) + {thetaLL * bLL} )
+      #IRF     <- plogis({{log(thetaLL) + max(b)}-{max(b)*thetaLL}} + {thetaLL * bLL})
+      IRF     <- plogis( thetaLL + {thetaLL * bLL} )
       IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 
@@ -125,18 +127,20 @@ fishburn <- function(x, method="LA", model=1, Iters=100, Smpl=1000,
 
       ## Prior parameters
       theta <- parm[Data$pos.theta]
-      b     <- exp(parm[Data$pos.b])
+      #b     <- exp(parm[Data$pos.b])
+      b     <- parm[Data$pos.b]
 
       ### Log-Priors
       theta.prior <- sum(dnorm(theta, mean=0   , sd=1, log=T))
-      b.prior     <- sum(dlnorm(b   , meanlog=0, sdlog=1, log=T))
+      #b.prior     <- sum(dlnorm(b   , meanlog=0, sdlog=1, log=T))
+      b.prior     <- sum(dnorm(b   , mean=0, sd=1, log=T))
       Lpp <- theta.prior + b.prior
 
       ### Log-Likelihood
       thetaLL <- rep(theta, times=Data$v)
       bLL     <- rep(b    , each=Data$n)
-      IRF     <- plogis({{log(bLL) + max(theta)}-{max(theta)*bLL}} + {bLL * thetaLL})
-      #IRF     <- plogis( log(bLL) + {thetaLL * bLL} )
+      #IRF     <- plogis({{log(bLL) + max(theta)}-{max(theta)*bLL}} + {bLL * thetaLL})
+      IRF     <- plogis( bLL + {thetaLL * bLL} )
       IRF[which(IRF == 1)] <- 1 - 1e-7
       LL      <- sum( dbinom(Data$X[,3], size=1, prob=IRF, log=T) )
 

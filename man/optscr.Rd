@@ -24,7 +24,7 @@ optscr(x, levels=NULL, M=5, basis="rademacher", err=NULL, knots=NULL,
    \item{a.s}{This is the alpha.star parameter, representing the target acceptance rate of the "MCMC" method. The value defaults to 0.234.}
    \item{B}{A logical parameter representing if blockwise sampling (i.e., true scores first, then item parameters) should be used instead of multivariate sampling when using the "MCMC" method. The value defaults to TRUE.}
    \item{temp}{Controls the "SANN" algorithm applied with the "MAP" method. It is the starting temperature for the cooling schedule. Defaults to 1e-2.}
-   \item{tmax}{It is the number of function evaluations at each temperature for the "SANN" algorithm applied with the "MAP" method. Defaults to 1. It is also the absolute convergence tolerance for the sum of squared derivatives (SSD) when algo is "SD" or "ADAM". Defaults to 1e-3.}
+   \item{tmax}{It is the number of function evaluations at each temperature for the "SANN" algorithm applied with the "MAP" method. Defaults to 1. It is also the relative convergence tolerance when algo is "SD" or "ADAM". Defaults to 1e-8.}
    \item{algo}{The algorithm to be used if the estimation method is "MAP". Defaults to "GA", for a real-valued based genetic algorithm. The other possible values are "SANN", for Simulated Annealing, "SD", for Steepest 2-Group Gradient Descent, and "ADAM", for Steepest Adaptive Moment Estimation.}
    \item{seed}{The random seed for guaranteeing replicable results. As most examples in LaplacesDemon, it defaults to 666.}
    \item{Interval}{This is the interval of numeric differencing when using the "SD" and "ADAM" algorithms with the "MAP" method. Defaults to 1e-8.}

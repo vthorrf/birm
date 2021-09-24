@@ -10,7 +10,7 @@ Gammas <- function(Model, par, Data, est, df, vi, si, iter, epsilon) {
 }
 
 ### ADAM MAP====
-SEGD <- function(Model, startvalue, Data, Interval=1e-6, maxit=100, tol=1e-3) {
+SEGD <- function(Model, startvalue, Data, Interval=1e-6, maxit=100, tol=1e-8) {
   # Opening message
   cat("Steepest Adam Maximum a Posteriori estimation will run for ",
       maxit, " iterations at most.\n\n", sep="")
@@ -56,9 +56,8 @@ SEGD <- function(Model, startvalue, Data, Interval=1e-6, maxit=100, tol=1e-3) {
     s[i,]   <- {{gammas * s[i-1,]} + {{1 - gammas} * {G[i,]*G[i,]}}}/{1 - {gammas^i}}
     par[i,] <- par[i-1,] + {{alpha*v[i,]}/{epsilon+sqrt(s[i,])}}
     f[i]    <- Model(par[i,], Data)[["LP"]]
-    if ({abs(c(G[i,] %*% G[i,])) < tol} |
-        {abs(c(GG[i,] %*% GG[i,])) < {tol * tol}} |
-        {mean(abs(c(G[i,] - G[i-1,]))) < tol}) {
+    # Check convergence
+    if (reltol(f[i], tol) > abs(f[i] - f[i-1])) {
       convergence = T
       setTxtProgressBar(pb, maxit)
       cat("\nConvergence achieved!")
