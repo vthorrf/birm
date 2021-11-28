@@ -33,7 +33,7 @@ sirm <- function(x, method="LA", Iters=100, Smpl=1000,
   is.data(MyData)
 
   ### Model====
-  Model <- function(parm, Data){
+  Model <- function(parm, Data) {
 
     ## Prior parameters
     theta <- exp(parm[Data$pos.theta])

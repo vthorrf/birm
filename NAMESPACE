@@ -5,6 +5,7 @@ export(optscr)
 export(pcm)
 export(plm)
 export(rasch)
+export(rpcm)
 export(rsm)
 export(simData)
 export(sirm)
@@ -15,10 +16,13 @@ importFrom("stats", "BIC", "cor", "dbeta", "dbinom", "dnorm", "optim",
 importFrom("utils", "data")
 importFrom("LaplacesDemon", "GIV", "IterativeQuadrature", "LaplaceApproximation", "LaplacesDemon",
            "PMC", "VariationalBayes", "as.parm.names", "dcat", "interval", "qtrunc",
-           "is.bayesian", "is.data", "is.model", "rcat")
+           "is.bayesian", "is.data", "is.model", "rcat", "dlaplace", "qcat")
 importFrom("parallel", "detectCores")
 importFrom("compiler", "cmpfun")
 importFrom("tidyr", "gather")
 importFrom("matrixStats", "rowCumsums")
 importFrom("GA", "ga")
 importFrom("ucminf", "ucminf")
+importFrom("stats", "dlnorm", "dpois", "ecdf", "qpois", "quantile",
+           "rlnorm", "sd")
+importFrom("utils", "setTxtProgressBar", "txtProgressBar")

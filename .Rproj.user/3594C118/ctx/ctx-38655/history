@@ -1,0 +1,163 @@
+###===--- Pesquisa ETED ---===###
+### Start====
+rm(list=ls())
+dev.off()
+cat("\014")
+### Packages and Functions====
+require(heaven)
+require(openxlsx)
+require(lavaan)
+acc <- function(mod, x, y) {
+sum(diag(table({predict(mod, x) > 0}*1, y))) / sum(table({predict(mod, x) > 0}*1, y))
+}
+write.excel <- function(x,row.names=FALSE,col.names=TRUE,...) {
+write.table(x,file = paste0("clipboard-", object.size(x)),sep="\t",row.names=row.names,col.names=col.names,...)
+}
+### Data====
+dataset <- as.data.frame(haven::read_sav("BDBiaZ.sav"))
+DSNames <- openxlsx::read.xlsx("EBADEPHOSP v0.xlsx", sheet=4)[,2]
+colnames(dataset) <- DSNames
+resp_k  <- openxlsx::read.xlsx("EBADEPHOSP.xlsx", sheet=3)
+### EBADEP====
+EBADEP <- dataset[,grep("EBADEP",colnames(dataset))]
+invert <- c(2, 3, 4, 6, 9, 10, 11, 12, 16, 18, 21,
+27, 28, 32, 38, 42)
+code   <- rep(1, ncol(EBADEP))
+code[invert] <- -1
+EBADEPp <- psych::reverse.code(code, EBADEP)
+colnames(EBADEPp) <- colnames(EBADEP)
+EBADEPp <- EBADEP[complete.cases(EBADEP),-6]
+model   <- paste("F1", paste(colnames(EBADEPp), collapse=" + "),
+sep=" =~ ")
+fit0    <- lavaan::cfa(model, EBADEPp, estimator="WLSMV",
+std.lv=T)
+summary(fit0, standard=T)
+fitMeasures(fit0, c("chisq.scaled","df.scaled","cfi.scaled","tli.scaled",
+"rmsea.scaled","srmr","ecvi"))
+### Vari?veis crit?rio====
+###====================== J? tentou suic?dio?
+SS              <- dataset$Dpsi_13
+SS[SS == 2] <- 0
+SS[SS == 1] <- 1
+SS              <- as.numeric(SS)
+###====================== QSG
+QSG <- dataset[,grep("QSG",colnames(dataset))]
+# Depress?o
+QSGD  <- QSG[,c(2,5,6,7,9,10,11)]
+# Auto-efic?cia
+QSGA <- QSG[,setdiff(1:ncol(QSG),c(2,5,6,7,9,10,11))]
+# Escores de Soma
+QSGDP <- rowMeans(QSGD)
+QSGAP <- rowMeans(QSGA)
+###====================== EAS - Dimens?es
+EAS <- dataset[,grep("EAS",colnames(dataset))]
+Psicoticismo <- EAS[,c(4, 8, 12, 20, 27, 32, 36, 38, 39, 40)]
+Obsessividade.Compulsividade <- EAS[,c(13, 18, 21, 23, 25, 26,
+28, 30, 34, 35)]
+Somatizacao <- EAS[,c(1, 2, 7, 10, 11, 15, 16, 19, 22, 24)]
+Ansiedade <- EAS[,c(3, 5, 6, 9, 14, 17, 29, 31, 33, 37)]
+# Escores de Soma
+EAS.P <- rowMeans(Psicoticismo)
+EAS.O <- rowMeans(Obsessividade.Compulsividade)
+EAS.S <- rowMeans(Somatizacao)
+EAS.A <- rowMeans(Ansiedade)
+###====================== PHQ - Ponto de corte
+PHQ <- dataset[,grep("PHQ",colnames(dataset))]
+# 0-8: Sem depress?o
+# 9 ou maior: depress?o
+PHQD <- {rowSums(PHQ) > 8} * 1
+###====================== HADS
+HADS <- dataset[,grep("HADS",colnames(dataset))]
+Dep <- HADS[,c(2, 4, 6, 8, 10, 12, 14)]
+# 0-8: Sem depress?o
+# 9 ou maior: depress?o
+Ans  <- HADS[,setdiff(1:ncol(HADS), c(2, 4, 6, 8, 10, 12, 14))]
+# 0-8: Sem ansiedade
+# 9 ou maior: ansiedade
+DepD <- {rowSums(Dep) > 8} * 1
+AnsD <- {rowSums(Ans) > 8} * 1
+### Modelos fatoriais====
+fatores <- c("EBADEP", "QSG", "PHQ", "HADS")
+factors <- c("QSG", "PHQ", "HADS")
+escalas <- list(EBADEPp, QSGD, PHQ, Dep)
+escales <- list(QSGD, PHQ, Dep)
+all.scale <- cbind(EBADEPp, QSGD, PHQ, Dep)
+sec.scale <- cbind(EBADEPp, QSGD, PHQ, Dep)
+# Unifatorial
+mod1 <- paste(
+"U =~ ", paste(colnames(all.scale),collapse=" + "), sep=""
+)
+# Bifatorial
+mod2 <- paste(c(mod1,
+paste(sapply(seq_along(fatores), function(g) {
+paste(fatores[g], paste(colnames(escalas[[g]]),collapse=" + "), sep=" =~ ")
+}), collapse="\n")),
+collapse="\n")
+# Bifatorial sem EBADEP
+mod1.1 <- paste(
+"U =~ ", paste(colnames(sec.scale),collapse=" + "), sep=""
+)
+mod2.2 <- paste(c(mod1.1,
+paste(sapply(seq_along(factors), function(g) {
+paste(factors[g], paste(colnames(escales[[g]]),collapse=" + "), sep=" =~ ")
+}), collapse="\n")),
+collapse="\n")
+# Multifatorial
+mod3 <- paste(sapply(seq_along(fatores), function(g) {
+paste(fatores[g], paste(colnames(escalas[[g]]),collapse=" + "), sep=" =~ ")
+}), collapse="\n")
+mod3.2 <- paste(sapply(seq_along(factors), function(g) {
+paste(factors[g], paste(colnames(escales[[g]]),collapse=" + "), sep=" =~ ")
+}), collapse="\n")
+# Ajustes
+fit1 <- lavaan::cfa(mod1, data=all.scale, estimator="WLSMV", std.lv=T)
+fit2 <- lavaan::cfa(mod2, data=all.scale, estimator="WLSMV", std.lv=T, orthogonal=T)
+fit3 <- lavaan::cfa(mod3, data=all.scale, estimator="WLSMV", std.lv=T)
+# SEM EBADEP
+fit2.2=lavaan::cfa(mod2.2, data=sec.scale, estimator="WLSMV", std.lv=T, orthogonal=T)
+fit3.2=lavaan::cfa(mod3.2, data=sec.scale, estimator="WLSMV", std.lv=T)
+write.excel(rbind(
+lavaan::fitmeasures(fit1, c("chisq.scaled","df.scaled","cfi.scaled","tli.scaled",
+"rmsea.scaled","srmr","ecvi")),
+lavaan::fitmeasures(fit2, c("chisq.scaled","df.scaled","cfi.scaled","tli.scaled",
+"rmsea.scaled","srmr","ecvi")),
+lavaan::fitmeasures(fit3, c("chisq.scaled","df.scaled","cfi.scaled","tli.scaled",
+"rmsea.scaled","srmr","ecvi"))
+))
+lambda_2 = inspect(fit2, what="std.all")$lambda
+theta_2  = inspect(fit2, what="std.all")$theta
+#write.excel(
+cbind(lambda_2, (lambda_2[,1]^2)/rowSums(cbind(lambda_2, diag(theta_2))^2))#,
+#            row.names=T)
+### Escores Fatoriais====
+## Extract parameters
+lambda_0 = inspect(fit0, what="std.all")$lambda
+psi_0    = inspect(fit0, what="std.all")$psi
+lambda_1 = inspect(fit1, what="std.all")$lambda
+psi_1    = inspect(fit1, what="std.all")$psi
+lambda_2 = inspect(fit2, what="std.all")$lambda
+psi_2    = inspect(fit2, what="std.all")$psi
+lambda_3 = inspect(fit3, what="std.all")$lambda
+psi_3    = inspect(fit3, what="std.all")$psi
+# Sem EBADEP
+lambda_2.2 = inspect(fit2.2, what="std.all")$lambda
+psi_2.2    = inspect(fit2.2, what="std.all")$psi
+lambda_3.2 = inspect(fit3.2, what="std.all")$lambda
+psi_3.2    = inspect(fit3.2, what="std.all")$psi
+## Calculate scores
+EF0 <- psych::factor.scores(EBADEPp, lambda_0, psi_0, method = "tenBerge")$scores
+EF1 <- psych::factor.scores(all.scale, lambda_1, psi_1, method = "tenBerge")$scores
+EF2 <- psych::factor.scores(all.scale, lambda_2, psi_2, method = "tenBerge")$scores
+EF3 <- psych::factor.scores(all.scale, lambda_3, psi_3, method = "tenBerge")$scores
+# Sem EBADEP
+EF2.2 = psych::factor.scores(sec.scale, lambda_2.2, psi_2.2, method = "tenBerge")$scores
+EF3.2 = psych::factor.scores(sec.scale, lambda_3.2, psi_3.2, method = "tenBerge")$scores
+## Compare scores
+Final <- data.frame("EBADEP_Uni"=c(EF0), "All_Uni"=c(EF1),
+"Multi_EBADEP"=c(EF3[,1]),
+"Bifactor"=c(EF2[,1]), "BiFac_EBADEP"=c(EF2[,2]),
+"BifactorSE"=c(EF2.2[,1]))
+#jpeg("Figure1.jpeg", height=20, width=20, units="cm", res=1200, pointsize=17)
+psych::pairs.panels(Final, digits=3, hist.col="gray", ci=T)
+#dev.off()
+####==== THE END(?) ====####

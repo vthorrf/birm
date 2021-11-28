@@ -11,8 +11,8 @@ ggum(x, K=NULL, method="LA", Iters=100, Smpl=1000, Thin=1, a.s=0.234,
 \arguments{
    \item{x}{A matrix in the wide format. You should certify that: the minimum possible score is 1; all variables are named; and that are only variables to be modeled.}
    \item{K}{The number of responses keys in the scale. If no value is inserted, the function assumes that the maximum value in x is the number of levels.}
-   \item{method}{The Bayesian estimation method to be used. Defaults to "LA" Variational Bayes. It can also be Laplace Approximation ("LA"), MCMC Hit-And-Run Metropolis ("MCMC"), Population Monte Carlo ("PMC"), Iterative Quadrature ("IQ"), or Maximum a Posteriori ("MAP").}
-   \item{Iters}{The maximum number of iterations. The default value, 100, is proposed for the default estimation method, "LA". For method "VB", we suggest 500 as the default. For method "MCMC", 20000. For method "PMC", 10. For method "IQ", 100. Finally, for method "MAP", if algo="SANN", than 50000, if algo="GA", than 500, and if algo="SD", than 100. However, ALWAYS check for convergence.}
+   \item{method}{The Bayesian estimation method to be used. Defaults to Laplace Approximation, "LA". It can also be Variational Bayes ("VB"), MCMC Hit-And-Run Metropolis ("MCMC"), Population Monte Carlo ("PMC"), Iterative Quadrature ("IQ"), or Maximum a Posteriori ("MAP").}
+   \item{Iters}{The maximum number of iterations. The default value, 100, is proposed for the default estimation method, "LA". For method "VB", we suggest 500 as the default. For method "MCMC", 20000. For method "PMC", 10. For method "IQ", 100. Finally, for method "MAP", if algo="SANN", than 50000, if algo="GA", than 500, and if algo="SD" or "ADAM", than 100. However, ALWAYS check for convergence.}
    \item{Smpl}{This argument indicates the number of posterior samples to be taken with sampling importance resampling for the estimation methods "IQ","LA", and "VB". For the "PMC" method, this is the number of samples per mixture component. This argument is not used by both the "MCMC" and the "MAP" methods. The default value, 1000, is already fit for all the estimation methods that use this argument.}
    \item{Thin}{This is the number by which the posterior is thinned. Only "MCMC" and "PMC" estimation methods use this argument.}
    \item{a.s}{This is the alpha.star parameter, representing the target acceptance rate of the "MCMC" method. The value defaults to 0.234.}
@@ -41,5 +41,5 @@ When "MAP" is used, instead of DIC, it is returned:
 n = 100; v = 10; l = 5
 Data <- simData(n, v, l)$data + 1
 # Generalized Graded Unfolding Model
-fit  <- ggum(Data, K=l, method="MAP", algo="GA", Iters=250)
+fit  <- ggum(Data, K=l, method="MAP", algo="GA", Iters=50)
 }
